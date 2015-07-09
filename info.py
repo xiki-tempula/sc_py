@@ -40,9 +40,9 @@ class Patch:
         delimiter=',', usecols=(2,4,5,6,8),unpack=True)
 
         # Remove all the empty rows
-        nonempty = ~np.isnan(state)
+        nonempty = np.isfinite(state)
         state = state[nonempty]
-        state = state[nonempty]
+        start = start[nonempty]
         end = end[nonempty]
         amp = amp[nonempty]
         dwell = dwell[nonempty]
@@ -51,10 +51,10 @@ class Patch:
         # If the end time is different from the next start time
         # A new cluster is defined
         sep_list = [0, ]
-        for i in range(len(nonempty) - 1):
+        for i in range(len(state) - 1):
             if end[i] != start[i+1]:
                 sep_list.append(i+1)
-        sep_list.append(len(nonempty)-1)
+        sep_list.append(len(state)-1)
 
         # Create a new cluster data if it is longer than 100ms
         for i in range(len(sep_list) - 1):
@@ -74,9 +74,9 @@ class Patch:
                 # Filter out the clusters which is irrigiular
                 open_period = dwell[open_period_idx]
                 shut_period = dwell[shut_period_idx]
-
-                while filter_first_last(open_period, shut_period):
-                    open_period, shut_period = filter_first_last(open_period, shut_period)
+                if filterone:
+                    while filter_first_last(open_period, shut_period):
+                        open_period, shut_period = filter_first_last(open_period, shut_period)
 
                 if (len(open_period) != cluster_length):
                     cluster_length = len(open_period)
@@ -87,7 +87,7 @@ class Patch:
 
                 # Create new cluster
                 self._cluster_number += 1
-                new_cluster = Cluster(self.get_path())
+                new_cluster = Cluster(self._patch_name, i+1)
                 new_cluster.add_info(self._cluster_number,
                                      start[open_period_idx[0]], end[shut_period_idx[-1]],
                                     dwell[open_period_idx], dwell[shut_period_idx],
@@ -119,6 +119,14 @@ class Patch:
         return self._cluster_list
 
     __getitem__ = get_cluster
+    
+    def __iter__(self):
+        cluster_list = self._cluster_list.copy()
+        while cluster_list:
+            yield self._cluster_dict[cluster_list.pop(0)]
+    
+    def __repr__(self):
+        return 'Patch({})'.format(self._patch_name)
 
     def __str__(self):
         if not hasattr(self, 'cluster_number'):
@@ -129,11 +137,15 @@ class Patch:
 
 
 
-class Cluster(Patch):
+class Cluster:
     '''
     Detail information about a cluster.
     '''
-
+    
+    def __init__(self, patchname, cluster_no):
+        self.patchname = patchname
+        self.cluster_no = cluster_no
+        
     def add_info(self, cluster_no, start, end,
                  open_period, shut_period,
                  open_amp, shut_amp):
@@ -141,11 +153,11 @@ class Cluster(Patch):
         Add information about the cluster.
         '''
 
-        self._cluster_no = cluster_no
+        self.cluster_no = cluster_no
         self._start = start
         self._end = end
-        self._open_period = open_period
-        self._shut_period = shut_period
+        self.open_period = open_period
+        self.shut_period = shut_period
         self._open_amp = open_amp
         self._shut_amp = shut_amp
 
@@ -153,8 +165,8 @@ class Cluster(Patch):
         # Calculate mean amplitude
         # Only takes into account of the periods longer than 0.3ms
         # If all the periods are less than 0.3ms take the median instead
-        open_val = self._open_amp[self._open_period > 0.3]
-        shut_val = self._shut_amp[self._open_period > 0.3]
+        open_val = self._open_amp[self.open_period > 0.3]
+        shut_val = self._shut_amp[self.open_period > 0.3]
         if len(open_val) > 0:
             mean_amp = np.mean(open_val)
         else:
@@ -164,14 +176,14 @@ class Cluster(Patch):
             mean_amp -= np.mean(shut_val)
         else:
             mean_amp -= np.median(shut_val)
-        self._mean_amp = mean_amp
+        self.mean_amp = mean_amp
 
         # Calculate the mean Popen
-        self._mean_popen = np.sum(self._open_period)/(np.sum(self._open_period) +
-        np.sum(self._shut_period))
+        self.mean_popen = np.sum(self.open_period)/(np.sum(self.open_period) +
+        np.sum(self.shut_period))
 
         # Calculate the duration
-        self._duration = self._end - self._start
+        self.duration = sum(self.open_period) + sum(self.shut_period)
 
     def get_cluster_detail(self):
         '''
@@ -181,8 +193,8 @@ class Cluster(Patch):
         cluster_dict = {}
         cluster_dict['start'] = self._start
         cluster_dict['end'] = self._end
-        cluster_dict['open_period'] = self._open_period
-        cluster_dict['shut_period'] = self._shut_period
+        cluster_dict['open_period'] = self.open_period
+        cluster_dict['shut_period'] = self.shut_period
         cluster_dict['open_amp'] = self._open_amp
         cluster_dict['shut_amp'] = self._shut_amp
         return cluster_dict
@@ -193,7 +205,7 @@ class Cluster(Patch):
         '''
 
         separation_dict, cost_dict, mean_cost_dict = compute_separation_dict(
-        np.log(self._open_period), np.log(self._shut_period), mode_number)
+        np.log(self.open_period), np.log(self.shut_period), mode_number)
         mode_number = compute_stretch_number(cost_dict, mean_cost_dict, threshold)
         self._mode_number = mode_number
         self._separation_dict = separation_dict
@@ -212,18 +224,18 @@ class Cluster(Patch):
         mean_shut = []
 
         for i in range(len(mode_separation)-1):
-            open_period = self._open_period[mode_separation[i]:mode_separation[i+1]]
-            shut_period = self._shut_period[mode_separation[i]:mode_separation[i+1]]
+            open_period = self.open_period[mode_separation[i]:mode_separation[i+1]]
+            shut_period = self.shut_period[mode_separation[i]:mode_separation[i+1]]
             popen_list.append(sum(open_period)/(sum(open_period) + sum(shut_period)))
             mean_open.append(np.exp(np.mean(np.log(open_period))))
             mean_shut.append(np.exp(np.mean(np.log(shut_period))))
             if i == 0:
                 mode_start.append(0)
             else:
-                mode_start.append(sum(self._open_period[:mode_separation[i]])
-                + sum(self._shut_period[:mode_separation[i]]))
-            mode_stop.append(sum(self._open_period[:mode_separation[i+1]])
-                + sum(self._shut_period[:mode_separation[i+1]]))
+                mode_start.append(sum(self.open_period[:mode_separation[i]])
+                + sum(self.shut_period[:mode_separation[i]]))
+            mode_stop.append(sum(self.open_period[:mode_separation[i+1]])
+                + sum(self.shut_period[:mode_separation[i+1]]))
 
         self._mode_start = mode_start
         self._mode_stop = mode_stop
@@ -255,22 +267,42 @@ class Cluster(Patch):
             return mode_dict
         else:
             return None
-
-
+            
+    def __repr__(self):
+        return 'Cluster({}/{})'.format(self.patchname,self.cluster_no)
+        
     def __str__(self):
-        str_filepath = 'Filepath: {} \n'.format(self.get_path())
-        str_cluster_no = 'Cluster number: {} \n'.format(int(self._cluster_no))
+        str_filepath = 'Patch Name: {} \n'.format(self.patchname)
+        str_cluster_no = 'Cluster number: {} \n'.format(int(self.cluster_no))
         str_start_end = 'From {:.2f} s to {:.2f} s. \n'.format(self._start/1000, self._end/1000)
-        str_duration = 'Cluster duration: {:.2f} ms \n'.format(self._duration)
-        str_amp = 'Mean amplitude: {:.2f} pA. \n'.format(self._mean_amp)
-        str_popen = 'Popen is {:.2f}'.format(self._mean_popen)
+        str_duration = 'Cluster duration: {:.2f} ms \n'.format(self.duration)
+        str_amp = 'Mean amplitude: {:.2f} pA. \n'.format(self.mean_amp)
+        str_popen = 'Popen is {:.2f}'.format(self.mean_popen)
         return str_filepath+str_cluster_no+str_start_end+str_duration+str_amp+str_popen
 
 
+class BatchCluster(Cluster):
+    '''
+    Cluster class with detailed information for batch analysis.
+    Initialize with kwargs for receptor, mutation, composition, agonist, concentration
+    Default: 'GlyR', 'wt', 'alpha1', 'glycine', None
+    '''
+    def __init__(self, cluster, **kwargs):
+        self.__dict__ = cluster.__dict__.copy()
+        
+        self.receptor = kwargs.get('receptor', 'GlyR')
+        self.mutation = kwargs.get('mutation', 'wt')
+        self.composition = kwargs.get('composition', 'alpha1')
+        self.agonist = kwargs.get('agonist', 'glycine')
+        self.concentration = kwargs.get('concentration', None)
+    
+    def __repr__(self):
+        return 'BatchCluster({}/{})'.format(self.patchname,self.cluster_no)
 
 
-# a = Patch('/Users/zhiyiwu/GitHub/sc_py/070710c1_0005_5.csv')
-# a.scan()
-# b = a[1]
-# b.compute_mode()
-# b.compute_mode_detail(True)
+a = Patch(os.path.join(os.getcwd(),'290610c1_0000.csv'))
+a.scan()
+b = a[1]
+c = BatchCluster(b)
+b.compute_mode()
+b.compute_mode_detail(True)

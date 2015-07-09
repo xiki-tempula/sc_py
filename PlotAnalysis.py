@@ -7,6 +7,7 @@ Created on Thu Jul  2 16:41:03 2015
 import numpy as np
 import matplotlib.pyplot as plt
 from info import Patch
+import os
 
 class PlotAnalysis:
     '''
@@ -191,7 +192,7 @@ class PlotAnalysis:
         ax1.set_ylabel('Normalised cost difference')
         
         
-a = Patch('/Users/zhiyiwu/GitHub/sc_py/070710c1_0005_5.csv')
+a = Patch(os.path.join(os.getcwd(),'070710c1_0005_5.csv'))
 a.scan()
 b = a[1]
 b.compute_mode()
