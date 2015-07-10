@@ -37,21 +37,7 @@ def add_separation(open_period, shut_period, separation):
     mean_cost /= cluster_length
     return separation_list, cost, mean_cost
 
-def filter_first_last(open_period, shut_period):
-    '''
-    Chop off the first or the last event if it is classifed as one stetch.
-    '''
-    separation_list, cost, mean_cost = add_separation(open_period, shut_period,
-                                                      [0, len(open_period)])
-    if separation_list[1] == 1:
-        open_period = open_period[1:]
-        shut_period = shut_period[1:]
-    elif separation_list[1] == len(open_period)-2:
-        open_period = open_period[:-2]
-        shut_period = shut_period[:-2]
-    else:
-        return False
-    return open_period, shut_period
+
     
 def compute_separation_dict(open_period, shut_period, mode_number):
     '''

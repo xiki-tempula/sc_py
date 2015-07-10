@@ -192,15 +192,15 @@ class PlotAnalysis:
         ax1.set_ylabel('Normalised cost difference')
         
         
-a = Patch(os.path.join(os.getcwd(),'070710c1_0005_5.csv'))
-a.scan()
-b = a[1]
-b.compute_mode()
-b.compute_mode_detail(True)
-c = PlotAnalysis()
-c.load_cluster(b)
-c.plot_original()
-c.plot_popen_on_original()
-c.plot_open_close()
-c.plot_cost_difference()
-plt.show()
+#a = Patch(os.path.join(os.getcwd(),'070710c1_0005_5.csv'))
+#a.scan()
+#b = a[1]
+#b.compute_mode()
+#b.compute_mode_detail(True)
+#c = PlotAnalysis()
+#c.load_cluster(b)
+#c.plot_original()
+#c.plot_popen_on_original()
+#c.plot_open_close()
+#c.plot_cost_difference()
+#plt.show()

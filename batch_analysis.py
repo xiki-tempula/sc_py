@@ -4,7 +4,7 @@ Created on Thu Jul  9 21:27:37 2015
 
 @author: xiki_tempula
 """
-from info import BatchCluster
+
 from collections import OrderedDict
 
 class BatchAnalysis:
@@ -14,6 +14,31 @@ class BatchAnalysis:
     
     def __init__(self, cluster_list):
         self.cluster_list = cluster_list
+    
+    def __len__(self):
+        return len(self.cluster_list)
+    
+    def get_dict(self, *args):
+        '''
+        Return a dict consists of lists of queried data.
+        By default return patchname, cluster_no, popen, amp, duration.
+        Optional arguments patchname, cluster_no, popen, amp, duration, 
+        (to be added).
+        '''
+        
+        option_list = ['patchname', 'cluster_no', 'popen', 'amp', 'duration']
+        if args:
+            selection_list = args
+        else:
+            selection_list = option_list
+        
+        result_dict = OrderedDict([(key, []) for key in selection_list])
+        for cluster in self.cluster_list:
+            for key in result_dict:
+                result_dict[key].append(getattr(cluster,key))
+        return result_dict
+
+        
     
     def get_patchname(self):
         '''
@@ -39,7 +64,7 @@ class BatchAnalysis:
         '''
         popen_list = []
         for cluster in self.cluster_list:
-            popen_list.append(cluster.mean_popen)
+            popen_list.append(cluster.popen)
         return popen_list
     
     def get_amp(self):
@@ -48,7 +73,7 @@ class BatchAnalysis:
         '''
         amp_list = []
         for cluster in self.cluster_list:
-            amp_list.append(cluster.mean_amp)
+            amp_list.append(cluster.amp)
         return amp_list
     
     def get_duration(self):
@@ -57,7 +82,7 @@ class BatchAnalysis:
         '''
         amp_list = []
         for cluster in self.cluster_list:
-            amp_list.append(cluster.mean_amp)
+            amp_list.append(cluster.duration)
         return amp_list
         
     def get_length(self):

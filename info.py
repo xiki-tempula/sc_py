@@ -4,7 +4,8 @@ Read from Csv file and generate the cluster data from it.
 """
 import numpy as np
 import os
-from cost_function import compute_stretch_number, compute_separation_dict, filter_first_last
+from cost_function import compute_stretch_number, compute_separation_dict
+from preparation import filter_first_last, impose_resolution
 
 class Patch:
     '''
@@ -91,7 +92,10 @@ class Patch:
                 new_cluster.add_info(self._cluster_number,
                                      start[open_period_idx[0]], end[shut_period_idx[-1]],
                                     dwell[open_period_idx], dwell[shut_period_idx],
-                                    amp[open_period_idx], amp[shut_period_idx])
+                                    end[open_period_idx],
+                                    amp[open_period_idx], amp[shut_period_idx],
+                                    np.zeros(len(open_period_idx)),
+                                    np.zeros(len(shut_period_idx)))
                 self._cluster_dict[self._cluster_number] = new_cluster
         self._cluster_list = list(self._cluster_dict.keys())
 
@@ -148,42 +152,69 @@ class Cluster:
         
     def add_info(self, cluster_no, start, end,
                  open_period, shut_period,
-                 open_amp, shut_amp):
+                 event_time,
+                 open_amp, shut_amp,
+                 open_flag, shut_flag):
         '''
         Add information about the cluster.
         '''
 
         self.cluster_no = cluster_no
-        self._start = start
-        self._end = end
+        self.start = start
+        self.end = end
         self.open_period = open_period
         self.shut_period = shut_period
-        self._open_amp = open_amp
-        self._shut_amp = shut_amp
+        self._event_time = event_time
+        self.open_amp = open_amp
+        self.shut_amp = shut_amp
+        self._open_flag = open_flag
+        self._shut_flag = shut_flag
 
 
         # Calculate mean amplitude
         # Only takes into account of the periods longer than 0.3ms
         # If all the periods are less than 0.3ms take the median instead
-        open_val = self._open_amp[self.open_period > 0.3]
-        shut_val = self._shut_amp[self.open_period > 0.3]
+        open_val = self.open_amp[self.open_period > 0.3]
+        shut_val = self.shut_amp[self.open_period > 0.3]
         if len(open_val) > 0:
             mean_amp = np.mean(open_val)
         else:
-            mean_amp = np.median(self._open_amp)
+            mean_amp = np.median(self.open_amp)
 
         if len(shut_val) > 0:
             mean_amp -= np.mean(shut_val)
         else:
             mean_amp -= np.median(shut_val)
-        self.mean_amp = mean_amp
+        self.amp = mean_amp
 
         # Calculate the mean Popen
-        self.mean_popen = np.sum(self.open_period)/(np.sum(self.open_period) +
+        self.popen = np.sum(self.open_period)/(np.sum(self.open_period) +
         np.sum(self.shut_period))
 
         # Calculate the duration
         self.duration = sum(self.open_period) + sum(self.shut_period)
+        
+    def impose_resolution(self, resolution = 0.3):
+        '''
+        Impose resolution. By default: 0.3ms
+        '''
+        (self.start, 
+         self.end, 
+         self.open_period, 
+         self.shut_period, 
+         self.open_amp, 
+         self.shut_amp, 
+         self._open_flag, 
+         self._shut_flag) = impose_resolution(self.start,
+                                             self.end, 
+                                             self.open_period, 
+                                             self.shut_period, 
+                                             self.open_amp, 
+                                             self.shut_amp, 
+                                             self._open_flag, 
+                                             self._shut_flag,
+                                             resolution)
+    
 
     def get_cluster_detail(self):
         '''
@@ -191,19 +222,19 @@ class Cluster:
         open_amp and shut_amp as a dictionary.
         '''
         cluster_dict = {}
-        cluster_dict['start'] = self._start
-        cluster_dict['end'] = self._end
+        cluster_dict['start'] = self.start
+        cluster_dict['end'] = self.end
         cluster_dict['open_period'] = self.open_period
         cluster_dict['shut_period'] = self.shut_period
-        cluster_dict['open_amp'] = self._open_amp
-        cluster_dict['shut_amp'] = self._shut_amp
+        cluster_dict['open_amp'] = self.open_amp
+        cluster_dict['shut_amp'] = self.shut_amp
         return cluster_dict
 
     def compute_mode(self, mode_number = 10, threshold = 3):
         '''
         Compute the ways of separating the mode.
         '''
-
+        
         separation_dict, cost_dict, mean_cost_dict = compute_separation_dict(
         np.log(self.open_period), np.log(self.shut_period), mode_number)
         mode_number = compute_stretch_number(cost_dict, mean_cost_dict, threshold)
@@ -274,10 +305,10 @@ class Cluster:
     def __str__(self):
         str_filepath = 'Patch Name: {} \n'.format(self.patchname)
         str_cluster_no = 'Cluster number: {} \n'.format(int(self.cluster_no))
-        str_start_end = 'From {:.2f} s to {:.2f} s. \n'.format(self._start/1000, self._end/1000)
+        str_start_end = 'From {:.2f} s to {:.2f} s. \n'.format(self.start/1000, self.end/1000)
         str_duration = 'Cluster duration: {:.2f} ms \n'.format(self.duration)
-        str_amp = 'Mean amplitude: {:.2f} pA. \n'.format(self.mean_amp)
-        str_popen = 'Popen is {:.2f}'.format(self.mean_popen)
+        str_amp = 'Mean amplitude: {:.2f} pA. \n'.format(self.amp)
+        str_popen = 'Popen is {:.2f}'.format(self.popen)
         return str_filepath+str_cluster_no+str_start_end+str_duration+str_amp+str_popen
 
 
@@ -299,10 +330,11 @@ class BatchCluster(Cluster):
     def __repr__(self):
         return 'BatchCluster({}/{})'.format(self.patchname,self.cluster_no)
 
-
+#
 a = Patch(os.path.join(os.getcwd(),'290610c1_0000.csv'))
 a.scan()
 b = a[1]
-c = BatchCluster(b)
-b.compute_mode()
-b.compute_mode_detail(True)
+b.impose_resolution()
+#c = BatchCluster(b)
+#b.compute_mode()
+#b.compute_mode_detail(True)

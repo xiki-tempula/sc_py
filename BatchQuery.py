@@ -109,7 +109,7 @@ class BatchQuery:
         self.query_list = query_list
 
 
-a = BatchQuery('/Users/xiki_tempula/Documents/data/')
-a.scan_folder()
-a.query(concentration = 100)
+#a = BatchQuery('/Users/xiki_tempula/Documents/data/')
+#a.scan_folder()
+#a.query(concentration = 100)
         
