@@ -7,6 +7,7 @@ import os
 from cost_function import compute_stretch_number, compute_separation_dict
 from preparation import filter_first_last, impose_resolution
 
+
 class Patch:
     '''
     Patch class contains the patch information and the cluster detail.
@@ -185,7 +186,7 @@ class Cluster:
             mean_amp -= np.mean(shut_val)
         else:
             mean_amp -= np.median(shut_val)
-        self.amp = mean_amp
+        self.mean_amp = mean_amp
 
         # Calculate the mean Popen
         self.popen = np.sum(self.open_period)/(np.sum(self.open_period) +
@@ -193,6 +194,45 @@ class Cluster:
 
         # Calculate the duration
         self.duration = sum(self.open_period) + sum(self.shut_period)
+    
+    def _get_period(self):
+        cluster_length = len(self.open_period)*2
+        period = np.empty(cluster_length)
+        period[::2] = self.open_period
+        period[1::2] = self.shut_period
+        return period
+            
+    def _set_period(self, period):
+        self.open_period = period[::2]
+        self.shut_period = period[1::2] 
+        
+    period = property(_get_period, _set_period)
+            
+    def _get_amp(self):
+        cluster_length = len(self.open_amp)*2
+        amp = np.empty(cluster_length)
+        amp[::2] = self.open_amp
+        amp[1::2] = self.shut_amp
+        return amp
+            
+    def _set_amp(self, amp):
+        self.open_amp = amp[::2]
+        self.shut_amp = amp[1::2] 
+        
+    amp = property(_get_amp, _set_amp)
+    
+    def _get_flag(self):
+        cluster_length = len(self._open_flag)*2
+        flag = np.empty(cluster_length)
+        flag[::2] = self._open_flag
+        flag[1::2] = self._shut_flag
+        return flag
+            
+    def _set_flag(self, flag):
+        self._open_flag = flag[::2]
+        self._shut_flag = flag[1::2] 
+        
+    flag = property(_get_flag, _set_flag)
         
     def impose_resolution(self, resolution = 0.3):
         '''
@@ -200,19 +240,13 @@ class Cluster:
         '''
         (self.start, 
          self.end, 
-         self.open_period, 
-         self.shut_period, 
-         self.open_amp, 
-         self.shut_amp, 
-         self._open_flag, 
-         self._shut_flag) = impose_resolution(self.start,
+         self.period, 
+         self.amp, 
+         self.flag) = impose_resolution(self.start,
                                              self.end, 
-                                             self.open_period, 
-                                             self.shut_period, 
-                                             self.open_amp, 
-                                             self.shut_amp, 
-                                             self._open_flag, 
-                                             self._shut_flag,
+                                             self.period, 
+                                             self.amp, 
+                                             self.flag, 
                                              resolution)
     
 
@@ -234,7 +268,7 @@ class Cluster:
         '''
         Compute the ways of separating the mode.
         '''
-        
+        self.impose_resolution()
         separation_dict, cost_dict, mean_cost_dict = compute_separation_dict(
         np.log(self.open_period), np.log(self.shut_period), mode_number)
         mode_number = compute_stretch_number(cost_dict, mean_cost_dict, threshold)
@@ -331,10 +365,10 @@ class BatchCluster(Cluster):
         return 'BatchCluster({}/{})'.format(self.patchname,self.cluster_no)
 
 #
-a = Patch(os.path.join(os.getcwd(),'290610c1_0000.csv'))
-a.scan()
-b = a[1]
-b.impose_resolution()
-#c = BatchCluster(b)
+#a = Patch(os.path.join(os.getcwd(),'290610c1_0000.csv'))
+#a.scan()
+#b = a[1]
+#amp = b.amp
+#b.impose_resolution()
 #b.compute_mode()
 #b.compute_mode_detail(True)

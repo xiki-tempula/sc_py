@@ -14,8 +14,10 @@ class PlotAnalysis:
     Plotting for the single channel analysis.
     '''
     
-    def __init__(self, open_period = np.random.exponential(1,100), 
+    def __init__(self, filepath = os.getcwd(),
+                 open_period = np.random.exponential(1,100), 
                  shut_period = np.random.exponential(1,100)):
+        self.filepath = filepath
         self._open_period = open_period
         self._shut_period = shut_period
         self._open_amp = np.ones(len(open_period))
@@ -70,7 +72,7 @@ class PlotAnalysis:
         '''
         Plot the original trace.
         '''
-        
+        fig.clf()
         # Build X axis
         time = np.zeros(2*len(self._open_period))
         time[0::2] = self._open_period
@@ -99,9 +101,9 @@ class PlotAnalysis:
         
         if ~hasattr(self, '_original_plot'):
             self.plot_original()
-            
-        if len(self._original_plot.get_axes()) == 1:
-            ax2 = self._original_plot.get_axes()[0].twinx()
+        fig = self._original_plot
+        if len(fig.get_axes()) == 1:
+            ax2 = fig.get_axes()[0].twinx()
         else:
             raise IndexError('More than one axis in the figure')
         mode_number = len(self._mode_start)
@@ -119,12 +121,14 @@ class PlotAnalysis:
         ax2.set_xlim([x[0], x[-1]])
         for tl in ax2.get_yticklabels():
             tl.set_color('blue')
+        ax2.set_title(' Popen')
+        fig.savefig(os.path.join(self.filepath,'Popen.png'),dpi=300)
     
     def plot_open_close(self, fig = plt.figure()):
         '''
         Plot the open period versus shut periods.
         '''
-        
+        fig.clf()
         if not hasattr(self, '_separation'):
             raise ReferenceError('The mode analysis of this cluster is not performed')
         
@@ -143,18 +147,20 @@ class PlotAnalysis:
                         s=100)
         ax.set_xscale('log')
         ax.set_yscale('log')
-        ax.set_ylim([np.exp(-4), np.exp(7)])
-        ax.set_xlim([np.exp(-4), np.exp(5)])
+        ax.set_ylim([np.exp(0.3), np.exp(7)])
+        ax.set_xlim([np.exp(0.3), np.exp(5)])
         ax.set_xlabel('Open period (ms in log scale)')
         ax.set_ylabel('Shut period (ms in log scale)')
-        
+        ax.set_title('Open/Shut')
+        fig.savefig(os.path.join(self.filepath,'Open_Shut.png'),dpi=300)
+   
     def plot_cost_difference(self, fig = plt.figure()):
         '''
         Plot the cost function, and the difference between the cost and 
         normalised cost function, which are all normalised by dividing by the 
         cluster length.
         '''
-        
+        fig.clf()
         if not hasattr(self, '_cost_dict'):
             raise ReferenceError('The mode analysis of this cluster is not performed')
         
@@ -191,8 +197,11 @@ class PlotAnalysis:
         ax1.set_xlabel('Mode number')
         ax1.set_ylabel('Normalised cost difference')
         
+        ax1.set_title('Cost/Difference')
+        fig.savefig(os.path.join(self.filepath,'Cost_Difference.png'),dpi=300)
         
-#a = Patch(os.path.join(os.getcwd(),'070710c1_0005_5.csv'))
+#        
+#a = Patch(os.path.join(os.getcwd(),'290610c1_0000.csv'))
 #a.scan()
 #b = a[1]
 #b.compute_mode()

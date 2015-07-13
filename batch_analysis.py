@@ -67,13 +67,13 @@ class BatchAnalysis:
             popen_list.append(cluster.popen)
         return popen_list
     
-    def get_amp(self):
+    def get_mean_amp(self):
         '''
         Get a list of cluster amplitude.
         '''
         amp_list = []
         for cluster in self.cluster_list:
-            amp_list.append(cluster.amp)
+            amp_list.append(cluster.mean_amp)
         return amp_list
     
     def get_duration(self):

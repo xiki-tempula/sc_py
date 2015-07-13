@@ -15,7 +15,7 @@ def list_folder(current_path):
     return [i_dir for i_dir in os.listdir(current_path)
     if (os.path.isdir(os.path.join(current_path,i_dir)) and i_dir[0] != '.')]
 
-class BatchQuery:
+class Batch:
     '''
     Save the information of many clusters into one file.
     '''
@@ -44,14 +44,32 @@ class BatchQuery:
                                               composition = kwargs['composition'],
                                               agonist = kwargs['agonist'],
                                               concentration = kwargs['concentration']))
+    def scan_folder(self, clear = True):
+        '''
+        Scan and collect all the clusters in the folder.
+        '''
+        if clear:
+            self._cluster_list = []
+        for folder in self._folder_list:
+            patch_list = [csv for csv in os.listdir(folder) if csv[-4:] == '.csv']
+            for patch in patch_list:
+                current_path = os.path.join(folder, patch)
+                current_patch = Patch(current_path)
+                current_patch.scan()
+                for cluster in current_patch:
+                    self._cluster_list.append(cluster)
+        return self._cluster_list
+                
+            
     
-    def scan_folder(self, func = _add_cluster):
+    def scan_orded_folder(self, func = _add_cluster, clear = True):
         '''
         Scan the folder and apply the func to every clusters in the folder.
         If func is not provided, a whole list of the clusters in the folder
         will be generated.
         '''
-
+        if clear:
+            self._cluster_list = []
         for folder in self._folder_list:
             current_path = folder
             current_folder_list = list_folder(current_path)
