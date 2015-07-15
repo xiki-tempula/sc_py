@@ -1,0 +1,31 @@
+Info module:
+    Patch class:
+        Initiation: csv path
+        scan: Generate a list of cluster object
+    Cluster class:
+        Initiation: patch name and cluster number
+        compute_mode: get mode number/separation dict/cost dict/ mean_cost_dict
+        compute_mode_detail: get Popen/mean_open/mean_shut
+    BatchCluster class:
+        child class of cluster with detail
+
+batch_analysis module:
+    BatchAnalysis class:
+        Initiation: list of cluster
+        get_dict: get dict of list of patchname,cluster_no,popen,amp,duration
+
+BatchQuery module:
+    Batch class:
+        Initiation: folder list, cluster list
+        add_cluster:
+        scan_folder: scan the folder to find csv and get a list of clusters
+        scan_orded_folder: scan the folder which is organised nicely and add tag to them
+        query: return a list of clusters which satisfised the channel name, mutation name, agonist name, concentration.
+        filter_by: filter by amplitude, Popen, duration, event_num
+PlotAnalysis module:
+    initiation:
+    load_cluster:
+    plot_original:
+    plotpopen_on_origianl
+    plot_open_close:
+    plot_cost difference:

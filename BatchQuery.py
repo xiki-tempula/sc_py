@@ -20,7 +20,7 @@ class Batch:
     Save the information of many clusters into one file.
     '''
     
-    def __init__(self, folder_list = None):
+    def __init__(self, folder_list = None, cluster_list = []):
         '''
         Define the location and name of the final generated report.
         '''
@@ -30,7 +30,7 @@ class Batch:
             else:
                 folder_list = [folder_list, ]
         self._folder_list = folder_list
-        self._cluster_list = []
+        self._cluster_list = cluster_list
         
         
     def _add_cluster(self, cluster, **kwargs):
@@ -112,9 +112,9 @@ class Batch:
         '''
         Output a list of clusters which satisfies the condition.
         '''
-        
+        keys = ['receptor', 'mutation', 'composition', 'agonist', 'concentration']
         for key in kwargs:
-            if not key in ['receptor', 'mutation', 'composition', 'agonist', 'concentration']:
+            if not key in keys:
                 raise KeyError("{} is not a recognised key from 'receptor', 'mutation', 'composition', 'agonist', 'concentration'".format(key))
         query_list = []
         for cluster in self._cluster_list:
@@ -124,7 +124,27 @@ class Batch:
                     condition = False
             if condition:
                 query_list.append(cluster)
-        self.query_list = query_list
+        return query_list
+    
+    def filter_by(self, amplitude = [-float('inf'), float('inf')],
+                        popen = [0,1],
+                        duration = [0, float('inf')],
+                        event_num = [0, float('inf')]):
+        '''
+        filter the cluster list by the ablove conditions.
+        '''
+        query_list = []
+        for cluster in self._cluster_list:
+            if ((cluster.mean_amp > amplitude[0]) and (cluster.mean_amp < amplitude[1])
+                and
+                (cluster.popen > popen[0]) and (cluster.popen < popen[1])
+                and
+                (cluster.duration > duration[0]) and (cluster.duration < duration[1])
+                and
+                (cluster.event_num > event_num[0]) and (cluster.event_num < event_num[1])):
+                    
+                query_list.append(cluster)
+        return query_list
 
 
 #a = BatchQuery('/Users/xiki_tempula/Documents/data/')

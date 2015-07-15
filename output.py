@@ -21,7 +21,8 @@ class Output:
         self._filename = filename
         
         self._dtype = {'patchname': 'U20',
-                       'cluster_no': 'u8'}
+                       'cluster_no': 'u8',
+                       'stretch_no': 'u8'}
     
     def read_cluster_list(self, cluster_list):
         batch = BatchAnalysis(cluster_list)
@@ -51,6 +52,7 @@ class Output:
         self._selection = OrderedDict()
         self._selection['patchname'] = kwargs.get('patchname', True)
         self._selection['cluster_no'] = kwargs.get('cluster_no', True)
+        self._selection['stretch_no'] = kwargs.get('stretch_no', False)
         self._selection['popen'] = kwargs.get('popen', True)
         self._selection['amp'] = kwargs.get('amp', True)
         self._selection['duration'] = kwargs.get('duration', True)

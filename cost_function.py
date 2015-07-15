@@ -18,7 +18,7 @@ def compute_cost(open_period, shut_period, separation):
         temp_shut_period = shut_period[separation[i]: separation[i+1]]
         cost += np.sum((temp_shut_period - np.mean(temp_shut_period))**2)
     return cost
-    
+
 def add_separation(open_period, shut_period, separation):
     '''
     Add one separation point which yeild the minium cost function to the data.
@@ -38,32 +38,34 @@ def add_separation(open_period, shut_period, separation):
     return separation_list, cost, mean_cost
 
 
-    
-def compute_separation_dict(open_period, shut_period, mode_number):
+
+def compute_separation_dict(open_period, shut_period, mode_number, output = False):
     '''
     Compute the way of separation the cluster given the maxium number of modes.
     '''
-    print('Computing for the separation for mode 1.')
+    if output:
+        print('Computing for the separation for mode 1.')
     separation_dict = {}
     separation = [0, len(open_period)]
     separation_dict[1] = separation
-    
+
     cost_dict = {}
     cost_dict[1] = compute_cost(open_period, shut_period, separation)
-    
+
     mean_cost_dict = {}
     mean_cost_dict[1] = cost_dict[1]
-    
+
     if mode_number > 1:
         for i in range(2, mode_number+1):
-            print('Computing for the separation for mode {}.'.format(i))
-            separation, cost, mean_cost = add_separation(open_period, shut_period, 
+            if output:
+                print('Computing for the separation for mode {}.'.format(i))
+            separation, cost, mean_cost = add_separation(open_period, shut_period,
                                            separation)
             separation_dict[i] = separation
             cost_dict[i] = cost
             mean_cost_dict[i] = mean_cost
     return separation_dict, cost_dict, mean_cost_dict
-    
+
 def elbow_search(curve):
     '''
     Search the elbow point in the curve.
@@ -74,18 +76,18 @@ def elbow_search(curve):
     first_point = all_coor[0, :]
     lin_vec = all_coor[-1, :] - first_point
     lin_vec_n = lin_vec/np.sqrt(sum(lin_vec**2))
-    
+
     vec_from_first = all_coor - first_point
 
     scalar_product = np.dot(vec_from_first, lin_vec_n)
 
     vec_from_first_parallel = scalar_product[:,None] * lin_vec_n
     vec_to_line = vec_from_first - vec_from_first_parallel
-    
+
     dist_to_line = np.sqrt(np.sum(vec_to_line ** 2, axis=1))
     return np.argmax(dist_to_line)
-    
-def compute_stretch_number(cost_dict, mean_cost_dict, threshold = 3):
+
+def compute_stretch_number(cost_dict, mean_cost_dict, threshold = 3, output = False):
     '''
     Compute the appropriate mode number.
     '''
@@ -94,8 +96,10 @@ def compute_stretch_number(cost_dict, mean_cost_dict, threshold = 3):
     difference = [mean_cost_dict[i] - cost_dict[i] for i in cost_dict.keys()]
 
     quotient = np.mean(difference[1:mode_number])/np.mean(difference[mode_number:])
-    print('The threshold is {} and the quotient is {}'.format(threshold, quotient))
+    if output:
+        print('The threshold is {} and the quotient is {}'.format(threshold, quotient))
     if quotient < threshold:
         mode_number = 1
-    print('The number of stretches is {}'.format(mode_number))
+    if output:
+        print('The number of stretches is {}'.format(mode_number))
     return mode_number

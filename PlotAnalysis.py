@@ -4,49 +4,31 @@ Created on Thu Jul  2 16:41:03 2015
 
 @author: zhiyiwu
 """
-import numpy as np
-import matplotlib.pyplot as plt
-from info import Patch
 import os
 
-class PlotAnalysis:
+import numpy as np
+import matplotlib.pyplot as plt
+
+from info import Patch
+from plot_computation import PlotComputation
+
+class PlotMPL:
     '''
     Plotting for the single channel analysis.
     '''
-    
-    def __init__(self, filepath = os.getcwd(),
-                 open_period = np.random.exponential(1,100), 
-                 shut_period = np.random.exponential(1,100)):
+
+    def __init__(self, filepath = os.getcwd()):
         self.filepath = filepath
-        self._open_period = open_period
-        self._shut_period = shut_period
-        self._open_amp = np.ones(len(open_period))
-        self._shut_amp = np.zeros(len(shut_period))
-        self._start = 0
-        self._end = sum(open_period) + sum(shut_period)
-    
-    def define_amp(self, open_amp, shut_amp):
-        '''
-        Change the default one for open amp and zero for shut amplitude.
-        '''
-        
-        self._open_amp = open_amp
-        self._shut_amp = shut_amp
-    
-    def define_start_end(self, start, end):
-        '''
-        Change the default 0 for start and cluster length for end.
-        '''
-        
-        self._start = start
-        self._end = end
-    
+        self._plot_dict = {}
+
     def load_cluster(self, cluster):
         '''
         Load necessary information from cluster object.
         '''
-        
-        self._cluster = cluster
+
+        self.cluster_data = PlotComputation(cluster)
+        self.name = cluster.identity()
+        '''
         cluster_dict = cluster.get_cluster_detail()
         self._start = cluster_dict['start']
         self._end = cluster_dict['end']
@@ -54,7 +36,7 @@ class PlotAnalysis:
         self._shut_period = cluster_dict['shut_period']
         self._open_amp = cluster_dict['open_amp']
         self._shut_amp = cluster_dict['shut_amp']
-        
+
         if cluster.get_mode_detail():
             mode_dict = cluster.get_mode_detail()
             self._separation = mode_dict['separation']
@@ -65,86 +47,75 @@ class PlotAnalysis:
             self._mean_shut = mode_dict['mean_shut']
             self._cost_dict = mode_dict['cost_dict']
             self._mean_cost_dict = mode_dict['mean_cost_dict']
+        '''
 
-            
-    
-    def plot_original(self, fig = plt.figure()):
+
+    def plot_original(self, fig = plt.figure(), savefig = True):
         '''
         Plot the original trace.
         '''
         fig.clf()
         # Build X axis
-        time = np.zeros(2*len(self._open_period))
-        time[0::2] = self._open_period
-        time[1::2] = self._shut_period
-        time = np.cumsum(time)
-        time = np.repeat(time,2)
-        time = np.hstack((self._start, time[:-1]))
-        
-        # Build Y axis
-        amp = np.zeros(2*len(self._open_period))
-        amp[0::2] = self._open_amp
-        amp[1::2] = self._shut_amp
-        amp = np.repeat(amp,2)
+        time, amp = self.cluster_data.compute_original()
+
         ax1 = fig.add_subplot(111)
-        ax1.plot(time, amp, color = 'black', lw=1, 
+        ax1.plot(time, amp, color = 'black', lw=1,
                                 label = 'Original trace')
         ax1.set_xlim([time[0], time[-1]])
         ax1.set_xlabel('Time (ms)')
         ax1.set_ylabel('Amplitude (pA)')
-        self._original_plot = fig
-    
-    def plot_popen_on_original(self):
+        ax1.set_title('Original trace')
+        self._plot_dict['original'] = fig
+        if savefig:
+            fig.savefig(os.path.join(self.filepath,self.name+'_Original.png'),dpi=300)
+
+
+    def plot_popen_on_original(self, savefig = True):
         '''
         Plot the Popen of different modes on the original trace.
         '''
-        
-        if ~hasattr(self, '_original_plot'):
+
+        if 'original' in self._plot_dict:
             self.plot_original()
-        fig = self._original_plot
+        fig = self._plot_dict['original']
         if len(fig.get_axes()) == 1:
             ax2 = fig.get_axes()[0].twinx()
         else:
             raise IndexError('More than one axis in the figure')
-        mode_number = len(self._mode_start)
-        x = []
-        y = []
-        for i in range(mode_number):
-            x.append(self._mode_start[i])
-            x.append(self._mode_stop[i])
-            y.append(self._popen_list[i])
-        y = np.repeat(y,2)
-        ax2.plot(x, y, color = 'blue', label = 'Popen')
+
+        time, popen = self.cluster_data.compute_popen()
+
+        ax2.plot(time, popen, color = 'blue', label = 'Popen')
         ax2.set_ylabel('Popen')
         ax2.yaxis.label.set_color('blue')
         ax2.set_ylim([0, 1])
-        ax2.set_xlim([x[0], x[-1]])
+        ax2.set_xlim([time[0], time[-1]])
         for tl in ax2.get_yticklabels():
             tl.set_color('blue')
-        ax2.set_title(' Popen')
-        fig.savefig(os.path.join(self.filepath,'Popen.png'),dpi=300)
-    
-    def plot_open_close(self, fig = plt.figure()):
+        if savefig:
+            fig.savefig(os.path.join(self.filepath,self.name+'Popen.png'),dpi=300)
+
+    def plot_open_close(self, fig = plt.figure(), savefig = True):
         '''
         Plot the open period versus shut periods.
         '''
+
+        stretch_list = self.cluster_data.compute_open_close()
+        mode_num = len(stretch_list)
+
         fig.clf()
-        if not hasattr(self, '_separation'):
-            raise ReferenceError('The mode analysis of this cluster is not performed')
-        
         ax = fig.add_subplot(111)
-        mode_number = len(self._mode_start)
-        cmap = np.linspace(0,1,mode_number)
-        for i in range(mode_number):
-            open_period = self._open_period[self._separation[i]:self._separation[i+1]]
-            shut_period = self._shut_period[self._separation[i]:self._separation[i+1]]
-            ax.scatter(open_period, shut_period, facecolors='none', 
-                       edgecolors=plt.cm.spectral(cmap[i]),
-                        s=1)
-        for i in range(mode_number):
-            ax.scatter(self._mean_open[i], self._mean_shut[i],  
-                       color=plt.cm.spectral(cmap[i]),
-                        s=100)
+        cmap = np.linspace(0,1,mode_num)
+
+        for index, stretch in enumerate(stretch_list):
+            ax.scatter(stretch['open_period'], stretch['shut_period'],
+                       facecolors='none',
+                       edgecolors=plt.cm.spectral(cmap[index]),
+                       s=1)
+            ax.scatter(stretch['mean_open'], stretch['mean_shut'],
+                       color=plt.cm.spectral(cmap[index]),
+                       s=100)
+
         ax.set_xscale('log')
         ax.set_yscale('log')
         ax.set_ylim([np.exp(0.3), np.exp(7)])
@@ -152,55 +123,50 @@ class PlotAnalysis:
         ax.set_xlabel('Open period (ms in log scale)')
         ax.set_ylabel('Shut period (ms in log scale)')
         ax.set_title('Open/Shut')
-        fig.savefig(os.path.join(self.filepath,'Open_Shut.png'),dpi=300)
-   
-    def plot_cost_difference(self, fig = plt.figure()):
+        if savefig:
+            fig.savefig(os.path.join(self.filepath,self.name+'Open_Shut.png'),dpi=300)
+
+    def plot_cost_difference(self, fig = plt.figure(), savefig = True):
         '''
-        Plot the cost function, and the difference between the cost and 
-        normalised cost function, which are all normalised by dividing by the 
+        Plot the cost function, and the difference between the cost and
+        normalised cost function, which are all normalised by dividing by the
         cluster length.
         '''
         fig.clf()
-        if not hasattr(self, '_cost_dict'):
-            raise ReferenceError('The mode analysis of this cluster is not performed')
-        
-        # Normalise the cost and 
-        cost = np.array([self._cost_dict[i] for i in self._cost_dict])
-        mean_cost = np.array([self._mean_cost_dict[i] for i in self._mean_cost_dict])
-        cluster_length = len(self._open_period)
-        normalised_cost = cost/cluster_length
-        normalised_mean_cost = mean_cost/cluster_length
-        mode_number = len(self._separation) - 1
-        x = range(1, len(cost) + 1)        
-        
+
+        # get the data
+        dataset = self.cluster_data.compute_cost_diff()
+        mode_num = dataset['mode_num']
+        cost = dataset['cost']
+        mean_cost = dataset['mean_cost']
+        difference = dataset['difference']
+        mean_difference = dataset['mean_difference']
+        x = range(1, len(cost)+1)
+
         # Plot cost and mean cost function
         ax1 = fig.add_subplot(211)
-        ax1.plot(x, normalised_cost, color = 'blue', label = 'cost')
-        ax1.plot(x, normalised_mean_cost, color = 'red', label = 'mean cost')
-        ax1.plot(mode_number, normalised_cost[mode_number - 1], 'o')
-        ax1.plot(mode_number, normalised_mean_cost[mode_number - 1], 'o')
+        ax1.plot(x, cost, color = 'blue', label = 'cost')
+        ax1.plot(x, mean_cost, color = 'red', label = 'mean cost')
+        ax1.plot(mode_num, cost[mode_num - 1], 'o')
+        ax1.plot(mode_num, mean_cost[mode_num - 1], 'o')
         ax1.set_xlabel('Mode number')
         ax1.set_ylabel('Normalised cost')
         ax1.legend()
         # ax1.set_ylim(bottom=0)
-        
-        # Calculate the difference between cost and mean cost funcion.
-        difference  = normalised_mean_cost - normalised_cost
-        heterogeneity_mean = np.mean(difference[1:mode_number])
-        baseline_mean = np.mean(difference[mode_number:])
-        
+
         # Plot the difference between two cost
+        x = range(2, len(cost)+1)
         ax2 = fig.add_subplot(212)
         ax2.plot(x, difference, 'o')
-        ax2.plot(range(2,mode_number+1), np.ones(mode_number-1)*heterogeneity_mean)
-        ax2.plot(range(mode_number+1, len(cost)+1), np.ones(len(cost)-mode_number)*baseline_mean)
+        ax2.plot(x, mean_difference)
         ax1.set_xlabel('Mode number')
         ax1.set_ylabel('Normalised cost difference')
-        
         ax1.set_title('Cost/Difference')
-        fig.savefig(os.path.join(self.filepath,'Cost_Difference.png'),dpi=300)
-        
-#        
+
+        if savefig:
+            fig.savefig(os.path.join(self.filepath,self.name+'Cost_Difference.png'),dpi=300)
+
+#
 #a = Patch(os.path.join(os.getcwd(),'290610c1_0000.csv'))
 #a.scan()
 #b = a[1]
