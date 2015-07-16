@@ -129,6 +129,7 @@ class Patch:
         while cluster_list:
             yield self._cluster_dict[cluster_list.pop(0)]
 
+
     def __repr__(self):
         return 'Patch({})'.format(self._patch_name)
 
@@ -300,7 +301,7 @@ class Cluster:
         if output:
             for i in range(len(mode_stop)):
                 print('Mode {}: Start: {:.2f}, End: {:.2f}, Popen {:.2f}, Mean open: {:.2f}, Mean shut: {:.2f}'.format(
-                i+1, mode_start[i], mode_stop[i], popen_list[i], mean_open[i],
+                i+1, self.mode_start[i], self.mode_stop[i], popen_list[i], mean_open[i],
                 mean_shut[i]))
 
     def _get_separation(self):
@@ -330,9 +331,11 @@ class Cluster:
             mode_dict['mode_start'] = self.mode_start
             mode_dict['mode_stop'] = self.mode_stop
             mode_dict['popen_list'] = self.popen_list
+            mode_dict['duration'] = self.mode_stop - self.mode_start
             mode_dict['mean_open'] = self.mean_open
             mode_dict['mean_shut'] = self.mean_shut
             mode_dict['separation'] = self._separation_dict[self.mode_number]
+            mode_dict['event_num'] = np.diff(mode_dict['separation'])
             mode_dict['cost_dict'] = self._cost_dict
             mode_dict['mean_cost_dict'] = self._mean_cost_dict
             return mode_dict
@@ -341,6 +344,13 @@ class Cluster:
 
     def identity(self):
         return '({}:{})'.format(self.patchname,self.cluster_no)
+
+
+    def __eq__(self, other):
+        if (self.patchname == other.patchname) and (self.cluster_no == other.cluster_no):
+            return True
+        else:
+            return False
 
     def __repr__(self):
         return 'Cluster({}/{})'.format(self.patchname,self.cluster_no)

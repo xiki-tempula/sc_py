@@ -19,7 +19,7 @@ class Batch:
     '''
     Save the information of many clusters into one file.
     '''
-    
+
     def __init__(self, folder_list = None, cluster_list = []):
         '''
         Define the location and name of the final generated report.
@@ -31,13 +31,13 @@ class Batch:
                 folder_list = [folder_list, ]
         self._folder_list = folder_list
         self._cluster_list = cluster_list
-        
-        
+
+
     def _add_cluster(self, cluster, **kwargs):
         '''
         Add cluster to cluster list.
         '''
-        
+
         self._cluster_list.append(BatchCluster(cluster,
                                               receptor = kwargs['receptor'],
                                               mutation = kwargs['mutation'],
@@ -59,10 +59,10 @@ class Batch:
                 for cluster in current_patch:
                     self._cluster_list.append(cluster)
         return self._cluster_list
-                
-            
-    
-    def scan_orded_folder(self, func = _add_cluster, clear = True):
+
+
+
+    def scan_orded_folder(self, func = _add_cluster, clear = True, export = False):
         '''
         Scan the folder and apply the func to every clusters in the folder.
         If func is not provided, a whole list of the clusters in the folder
@@ -73,33 +73,33 @@ class Batch:
         for folder in self._folder_list:
             current_path = folder
             current_folder_list = list_folder(current_path)
-                
+
             for receptor in current_folder_list:
                 current_path_R = os.path.join(current_path, receptor)
                 current_folder_list_R = list_folder(current_path_R)
-                    
+
                 for mutation in current_folder_list_R:
                     current_path_M = os.path.join(current_path_R, mutation)
                     current_folder_list_M = list_folder(current_path_M)
-                    
+
                     for composition in current_folder_list_M:
                         current_path_C = os.path.join(current_path_M, composition)
                         current_folder_list_C = list_folder(current_path_C)
-                        
+
                         for agonist in current_folder_list_C:
                             current_path_A = os.path.join(current_path_C, agonist)
                             current_folder_list_A = list_folder(current_path_A)
-                            
+
                             for concentration in current_folder_list_A:
                                 path = os.path.join(current_path_A, concentration)
                                 patch_list = [csv for csv in os.listdir(path)
                                               if csv[-4:] == '.csv']
-                                
+
                                 for patch in patch_list:
                                     filepath = os.path.join(path, patch)
                                     current_patch = Patch(filepath)
                                     current_patch.scan()
-                                    
+
                                     for cluster in current_patch:
                                         func(self, cluster,
                                              receptor = receptor,
@@ -107,15 +107,21 @@ class Batch:
                                              composition = composition,
                                              agonist = agonist,
                                              concentration = concentration)
-        
-    def query(self, **kwargs):
+        if export:
+            return self._cluster_list
+
+    def query(self, receptor = None, mutation = None,
+              composition = None, agonist = None, concentration = None):
         '''
         Output a list of clusters which satisfies the condition.
         '''
-        keys = ['receptor', 'mutation', 'composition', 'agonist', 'concentration']
-        for key in kwargs:
-            if not key in keys:
-                raise KeyError("{} is not a recognised key from 'receptor', 'mutation', 'composition', 'agonist', 'concentration'".format(key))
+        kwargs = {}
+        if receptor: kwargs['receptor'] = receptor
+        if mutation: kwargs['mutation'] = mutation
+        if composition: kwargs['composition'] = composition
+        if agonist: kwargs['agonist'] = agonist
+        if concentration: kwargs['concentration'] = concentration
+
         query_list = []
         for cluster in self._cluster_list:
             condition = True
@@ -125,7 +131,7 @@ class Batch:
             if condition:
                 query_list.append(cluster)
         return query_list
-    
+
     def filter_by(self, amplitude = [-float('inf'), float('inf')],
                         popen = [0,1],
                         duration = [0, float('inf')],
@@ -135,14 +141,14 @@ class Batch:
         '''
         query_list = []
         for cluster in self._cluster_list:
-            if ((cluster.mean_amp > amplitude[0]) and (cluster.mean_amp < amplitude[1])
+            if ((cluster.mean_amp >= amplitude[0]) and (cluster.mean_amp < amplitude[1])
                 and
-                (cluster.popen > popen[0]) and (cluster.popen < popen[1])
+                (cluster.popen >= popen[0]) and (cluster.popen < popen[1])
                 and
-                (cluster.duration > duration[0]) and (cluster.duration < duration[1])
+                (cluster.duration >= duration[0]) and (cluster.duration < duration[1])
                 and
-                (cluster.event_num > event_num[0]) and (cluster.event_num < event_num[1])):
-                    
+                (cluster.event_num >= event_num[0]) and (cluster.event_num < event_num[1])):
+
                 query_list.append(cluster)
         return query_list
 
@@ -150,4 +156,3 @@ class Batch:
 #a = BatchQuery('/Users/xiki_tempula/Documents/data/')
 #a.scan_folder()
 #a.query(concentration = 100)
-        

@@ -9,7 +9,6 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-from info import Patch
 from plot_computation import PlotComputation
 
 class PlotMPL:
@@ -28,27 +27,6 @@ class PlotMPL:
 
         self.cluster_data = PlotComputation(cluster)
         self.name = cluster.identity()
-        '''
-        cluster_dict = cluster.get_cluster_detail()
-        self._start = cluster_dict['start']
-        self._end = cluster_dict['end']
-        self._open_period = cluster_dict['open_period']
-        self._shut_period = cluster_dict['shut_period']
-        self._open_amp = cluster_dict['open_amp']
-        self._shut_amp = cluster_dict['shut_amp']
-
-        if cluster.get_mode_detail():
-            mode_dict = cluster.get_mode_detail()
-            self._separation = mode_dict['separation']
-            self._mode_start = mode_dict['mode_start']
-            self._mode_stop = mode_dict['mode_stop']
-            self._popen_list = mode_dict['popen_list']
-            self._mean_open = mode_dict['mean_open']
-            self._mean_shut = mode_dict['mean_shut']
-            self._cost_dict = mode_dict['cost_dict']
-            self._mean_cost_dict = mode_dict['mean_cost_dict']
-        '''
-
 
     def plot_original(self, fig = plt.figure(), savefig = True):
         '''
@@ -112,14 +90,14 @@ class PlotMPL:
                        facecolors='none',
                        edgecolors=plt.cm.spectral(cmap[index]),
                        s=1)
-            ax.scatter(stretch['mean_open'], stretch['mean_shut'],
+            ax.scatter(stretch['mean_open'][index], stretch['mean_shut'][index],
                        color=plt.cm.spectral(cmap[index]),
-                       s=100)
+                       s=50)
 
         ax.set_xscale('log')
         ax.set_yscale('log')
-        ax.set_ylim([np.exp(0.3), np.exp(7)])
-        ax.set_xlim([np.exp(0.3), np.exp(5)])
+        ax.set_ylim([0.3, np.exp(7)])
+        ax.set_xlim([0.3, np.exp(5)])
         ax.set_xlabel('Open period (ms in log scale)')
         ax.set_ylabel('Shut period (ms in log scale)')
         ax.set_title('Open/Shut')
@@ -165,17 +143,3 @@ class PlotMPL:
 
         if savefig:
             fig.savefig(os.path.join(self.filepath,self.name+'Cost_Difference.png'),dpi=300)
-
-#
-#a = Patch(os.path.join(os.getcwd(),'290610c1_0000.csv'))
-#a.scan()
-#b = a[1]
-#b.compute_mode()
-#b.compute_mode_detail(True)
-#c = PlotAnalysis()
-#c.load_cluster(b)
-#c.plot_original()
-#c.plot_popen_on_original()
-#c.plot_open_close()
-#c.plot_cost_difference()
-#plt.show()
