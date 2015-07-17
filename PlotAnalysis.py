@@ -9,7 +9,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-from plot_computation import PlotComputation
+from plot_computation import PlotSingleCluster, PlotMultiCluster
 
 class PlotMPL:
     '''
@@ -20,12 +20,17 @@ class PlotMPL:
         self.filepath = filepath
         self._plot_dict = {}
 
+class PlotSingle(PlotMPL):
+    '''
+    Ploting with single cluster data.
+    '''
+    
     def load_cluster(self, cluster):
         '''
         Load necessary information from cluster object.
         '''
 
-        self.cluster_data = PlotComputation(cluster)
+        self.cluster_data = PlotSingleCluster(cluster)
         self.name = cluster.identity()
 
     def plot_original(self, fig = plt.figure(), savefig = True):
@@ -143,3 +148,39 @@ class PlotMPL:
 
         if savefig:
             fig.savefig(os.path.join(self.filepath,self.name+'Cost_Difference.png'),dpi=300)
+
+class PlotBatch(PlotMPL):
+    '''
+    Plot a summary of many cluster data.
+    '''
+    def load_summary(self, summary_list, label = None):
+        '''
+        Load pre-processed data.
+        '''
+        if type(summary_list) != list:
+            self.summary_list = [summary_list, ]
+        else:
+            self.summary_list = summary_list
+            if label:
+                self.label = label
+
+        
+    def plot_popen_hist(self, bins = np.arange(0, 1.05, 0.05), ax = None, clear = True):
+        '''
+        Plot popen histogram of the data.
+        '''
+        if ax == None:
+            fig = plt.figure()
+            fig.clf()
+            ax = fig.add_subplot(111)
+        elif clear:
+            ax.cla()
+            
+            
+        hist, bins = self.computation.compute_hist('popen', bins = bins)
+        width = 0.7 * (bins[1] - bins[0])
+        center = (bins[:-1] + bins[1:]) / 2
+        ax.bar(center, hist, align='center', width=width)
+        ax.set_xlabel('Popen')
+        ax.set_ylabel('Numbers')
+        

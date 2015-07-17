@@ -3,7 +3,10 @@ Compute the necessary information for ploting.
 Such as x axis, y axis.
 '''
 import numpy as np
-class PlotComputation:
+
+from batch_analysis import BatchAnalysis
+
+class PlotSingleCluster:
     '''
     Generate the data for ploting.
     '''
@@ -69,10 +72,34 @@ class PlotComputation:
         '''
         Return a dict of cost, mean cost and difference.
         '''
-        return {'mode_num': self.cluster.mode_number,
+        cost_diff = {'mode_num': self.cluster.mode_number,
                 'cost': self.cluster.normalised_cost,
                 'mean_cost': self.cluster.normalised_mean_cost,
-                'difference': self.cluster.difference,
-                'mean_difference':
-                np.hstack((np.ones(self.cluster.mode_number-1)*np.mean(self.cluster.difference[1:self.cluster.mode_number]),
-                np.ones(len(self.cluster.normalised_cost)-self.cluster.mode_number)*np.mean(self.cluster.difference[self.cluster.mode_number:])))}
+                'difference': self.cluster.difference}
+
+        mean_difference = np.hstack((np.ones(self.cluster.mode_number-1)*np.mean(self.cluster.difference[:self.cluster.mode_number-1]),
+                np.ones(len(self.cluster.normalised_cost)-self.cluster.mode_number)*np.mean(self.cluster.difference[self.cluster.mode_number-1:])))
+        cost_diff['mean_difference'] = mean_difference
+        return cost_diff
+
+class PlotMultiCluster:
+    '''
+    Compute the information for multiply clusters.
+    '''
+    def __init__(self, summary):
+        self.summary = summary
+
+    def compute_hist(self, element, bins = None):
+        '''
+        Provide Popen list for ploting histogram.
+        '''
+        if element in self.summary.dtype.names:
+            data = self.summary[element]
+            if bins:
+                return np.histogram(data, bins=bins)
+            else:
+                return np.histogram(data)
+                
+        else:
+            raise KeyError('{} is not in the summary array.'.format(element))
+            

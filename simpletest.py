@@ -189,39 +189,42 @@ class TestSuit:
             test_patch = Patch(os.path.join(self._dir, patch))
             test_patch.scan()
             for cluster in test_patch:
+                cluster.compute_mode()
+                cluster.compute_mode_detail()
                 cluster_list.append(cluster)
 
-        batch_analysis = BatchAnalysis(cluster_list)
-        test_dict = batch_analysis.get_summary_dict('patchname', 'cluster_no', 'popen', 'mean_amp', 'duration')
+        # Test BatchAnalysis class
+        batch_analysis = BatchAnalysis(list(cluster_list))
+        test_dict = batch_analysis.compute_cluster_summary()
 
 
-        count = 0
+
         for patchname in self._name_list:
             for cluster_no in range(1, self.cluster_num+1):
-                if test_dict['patchname'][count] != patchname:
-                    print('Patchname error')
-                if test_dict['cluster_no'][count] != cluster_no:
-                    print('cluster_no error')
-                
+                test_dict = batch_analysis.compute_cluster_summary(
+                patchname = patchname, cluster_no = cluster_no)
+
                 temp_amp = np.mean(self._patch_list[patchname][cluster_no-1]['open_amp']
                                    -
                                    self._patch_list[patchname][cluster_no-1]['shut_amp'])
-                if abs(test_dict['mean_amp'][count] - temp_amp) > 0.0001:
+                if abs(test_dict['mean_amp'] - temp_amp) > 0.0001:
                     print('Amplitude error')
-                
+
                 temp_duration = (sum(self._patch_list[patchname][cluster_no-1]['open_period'])
                                  +
                                  sum(self._patch_list[patchname][cluster_no-1]['shut_period']))
-                
-                if abs(test_dict['duration'][count] - temp_duration) > 0.0001:
+
+                if abs(test_dict['duration'] - temp_duration) > 0.0001:
                     print('Duration error')
-                
+
                 temp_popen = sum(self._patch_list[patchname][cluster_no-1]['open_period']) / temp_duration
-                if abs(test_dict['popen'][count] - temp_popen) > 0.0001:
+                if abs(test_dict['popen'] - temp_popen) > 0.0001:
                     print('Popen error')
-                
-                count += 1
-        
+
+        # Test StretchSummary class
+
+        batch_analysis.compute_stretch_summary()
+
     def test_batch_query(self):
         '''
         test the batch_query module.
@@ -240,7 +243,7 @@ class TestSuit:
                        ('concentration', ['100', '0.1'])])
 
         organisation = {keys:{key: [] for key in choice_dict[keys]} for keys in choice_dict}
-        
+
         for index in range(len(self._name_list)):
             temp_filepath = self._dir
             for key in choice_dict:
@@ -251,9 +254,9 @@ class TestSuit:
                 os.makedirs(temp_filepath)
             except FileExistsError:
                 pass
-            shutil.copy2(os.path.join(self._dir, self._name_list[index]), 
+            shutil.copy2(os.path.join(self._dir, self._name_list[index]),
                       os.path.join(temp_filepath, self._name_list[index]))
-            
+
         test_batch = Batch(folder_list = self._dir)
         if len(test_batch.scan_folder()) != len(cluster_list):
             print('scan_folder error')
@@ -270,7 +273,7 @@ class TestSuit:
             for j in copy_organisation[i]:
                 if copy_organisation[i][j]:
                     print('scan_orded_folder error')
-        
+
         # Test query
         copy_organisation = copy.deepcopy(organisation)
         for i in organisation:
@@ -287,11 +290,10 @@ class TestSuit:
             for j in copy_organisation[i]:
                 if copy_organisation[i][j]:
                     print('query error')
-            
-        
+
         # Test filter
-        
-        
+
+
 
 
     def finish_test(self):
@@ -303,8 +305,8 @@ class TestSuit:
 
 
 A = TestSuit()
-A.test_info()
+#A.test_info()
 #A.test_PlotComputation_using_PlotMPL()
-#A.test_batch_analysis()
-A.test_batch_query()
+A.test_batch_analysis()
+#A.test_batch_query()
 A.finish_test()
