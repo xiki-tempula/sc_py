@@ -97,8 +97,9 @@ class PlotSingle(PlotMPL):
                        s=1)
             ax.scatter(stretch['mean_open'][index], stretch['mean_shut'][index],
                        color=plt.cm.spectral(cmap[index]),
-                       s=50)
-
+                       s=50, label = str(index + 1))
+    
+        ax.legend()
         ax.set_xscale('log')
         ax.set_yscale('log')
         ax.set_ylim([0.3, np.exp(7)])

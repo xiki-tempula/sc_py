@@ -225,7 +225,15 @@ class Cluster:
         self._shut_flag = flag[1::2]
 
     flag = property(_get_flag, _set_flag)
-
+    
+    def _get_mean_open(self):
+        return np.exp(np.mean(np.log(self.shut_period)))
+    mean_open = property(_get_mean_open)
+    
+    def _get_mean_shut(self):
+        return np.exp(np.mean(np.log(self.open_period)))
+    mean_shut = property(_get_mean_shut)
+    
     def impose_resolution(self, resolution = 0.3):
         '''
         Impose resolution. By default: 0.3ms
@@ -295,8 +303,8 @@ class Cluster:
         self.mode_start = self.start + np.array(mode_start)
         self.mode_stop = self.start + np.array(mode_stop)
         self.popen_list = popen_list
-        self.mean_open = mean_open
-        self.mean_shut = mean_shut
+        self.mode_mean_open = mean_open
+        self.mode_mean_shut = mean_shut
 
         if output:
             for i in range(len(mode_stop)):
@@ -332,8 +340,8 @@ class Cluster:
             mode_dict['mode_stop'] = self.mode_stop
             mode_dict['popen_list'] = self.popen_list
             mode_dict['duration'] = self.mode_stop - self.mode_start
-            mode_dict['mean_open'] = self.mean_open
-            mode_dict['mean_shut'] = self.mean_shut
+            mode_dict['mean_open'] = self.mode_mean_open
+            mode_dict['mean_shut'] = self.mode_mean_shut
             mode_dict['separation'] = self._separation_dict[self.mode_number]
             mode_dict['event_num'] = np.diff(mode_dict['separation'])
             mode_dict['cost_dict'] = self._cost_dict
@@ -384,13 +392,3 @@ class BatchCluster(Cluster):
     def __repr__(self):
         return 'BatchCluster({}/{})'.format(self.patchname,self.cluster_no)
 
-
-
-#
-#a = Patch(os.path.join(os.getcwd(),'290610c1_0000.csv'))
-#a.scan()
-#b = a[1]
-#amp = b.amp
-#b.impose_resolution()
-#b.compute_mode()
-#b.compute_mode_detail(True)

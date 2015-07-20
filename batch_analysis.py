@@ -78,9 +78,12 @@ class BatchAnalysis:
             else:
                 option_list['event_num'] = event_num
 
+        element_list = ['patchname', 'cluster_no', 'popen', 'mean_amp', 
+                        'duration', 'event_num', 'mean_open', 'mean_shut']
+
         count = 0
         self.summary = np.zeros((len(self.cluster_list), )
-                , dtype=[(key, dtype[key]) for key in option_list])
+                , dtype=[(key, dtype[key]) for key in element_list])
 
         for cluster in self.cluster_list:
             select = True
@@ -98,13 +101,13 @@ class BatchAnalysis:
                        select = False
                        break
             if select:
-                for key in option_list:
+                for key in element_list:
                     self.summary[count][key] = getattr(cluster,key)
                 count += 1
         self.summary = self.summary[:count]
         return self.summary
 
-
+    
 
     def compute_stretch_summary(self, patchname = True, cluster_no = True,
                                 stretch_num = True, popen = True,
@@ -137,7 +140,7 @@ class BatchAnalysis:
                     option_list['cluster_no'] = cluster_no
 
         if stretch_num:
-            option_list['stretch_no'] = NOFILTER
+            option_list['stretch_idx'] = NOFILTER
             if type(stretch_num) == bool:
                 option_list['stretch_num'] = NOFILTER
 
@@ -179,10 +182,12 @@ class BatchAnalysis:
                 option_list['event_num'] = NOFILTER
             else:
                 option_list['event_num'] = event_num
-
+        
+        element_list = ['patchname', 'cluster_no', 'stretch_num', 'stretch_idx', 
+                        'popen', 'mean_open', 'mean_shut', 'duration', 'event_num']
         count = 0
         self.summary = np.zeros((len(self.cluster_list), )
-                , dtype=[(key, dtype[key]) for key in option_list])
+                , dtype=[(key, dtype[key]) for key in element_list])
 
         for cluster in self.cluster_list :
             mode_dict = cluster.get_mode_detail()
@@ -191,7 +196,7 @@ class BatchAnalysis:
                 new_stretch = {'patchname': cluster.patchname,
                                'cluster_no': cluster.cluster_no,
                                'stretch_num': stretch_num,
-                               'stretch_no': index+1,
+                               'stretch_idx': index+1,
                                'popen': mode_dict['popen_list'][index],
                                'mean_open': mode_dict['mean_open'][index],
                                'mean_shut': mode_dict['mean_shut'][index],
@@ -212,7 +217,7 @@ class BatchAnalysis:
                             select = False
                             break
                 if select:
-                    for key in option_list:
+                    for key in element_list:
                         self.summary[count][key] = new_stretch[key]
                     count += 1
                     if count >= len(self.summary):
@@ -225,6 +230,22 @@ class BatchAnalysis:
         return self.summary
 
     
+    def get_summary(self, output = 'string'):
+        '''
+        Return the summary statistics.
+        '''
+        statistics = {}
+        for key in self.summary.dtype.fields:
+            if key != 'patchname':
+                value = np.mean(self.summary[key])
+                se = np.std(self.summary[key], ddof = 1)/np.sqrt(len(self.summary))
+                statistics[key] = {'value': value, 'se': se}
+        if output == 'dict':
+            return statistics
+        elif output == 'string':
+            string = '\n'.join(['{}:{:.5f}±{:.5f}'.format(key,statistics[key]['value'],
+                                statistics[key]['se']) for key in statistics])
+            return string
 
 
 

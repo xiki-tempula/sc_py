@@ -10,7 +10,7 @@ import copy
 import numpy as np
 
 from info import Patch
-from PlotAnalysis import PlotMPL
+from PlotAnalysis import PlotSingle
 from batch_analysis import BatchAnalysis
 from batch_query import Batch
 
@@ -173,7 +173,7 @@ class TestSuit:
             for index, cluster in enumerate(test_patch):
                 cluster.compute_mode()
                 cluster.compute_mode_detail()
-                test_plot = PlotMPL(self._dir)
+                test_plot = PlotSingle(self._dir)
                 test_plot.load_cluster(cluster)
                 test_plot.plot_original()
                 test_plot.plot_popen_on_original()

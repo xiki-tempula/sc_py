@@ -103,23 +103,29 @@ def impose_resolution(start, end, period, amp, flag, resolution):
         open_index  = np.where(state == True)[0]
         shut_index  = np.where(state == False)[0]
         # Find out all the adjacent shut/open.
+        consecutive = []
+        
         consecutive_open = np.where(np.diff(open_index) == 1)[0]
+        if consecutive_open.size != 0:
+            consecutive_open = np.unique(np.append(open_index[consecutive_open], open_index[consecutive_open+1]))
+            consecutive_open = np.split(consecutive_open, np.where(np.diff(consecutive_open) != 1)[0]+1)
+            consecutive += consecutive_open
+        
         consecutive_shut = np.where(np.diff(shut_index) == 1)[0]
-        
-        consecutive_open = np.unique(np.append(open_index[consecutive_open], open_index[consecutive_open+1]))
-        consecutive_shut = np.unique(np.append(shut_index[consecutive_shut], shut_index[consecutive_shut+1]))
-        
-        
-        consecutive_open = np.split(consecutive_open, np.where(np.diff(consecutive_open) != 1)[0]+1)
-        consecutive_shut = np.split(consecutive_shut, np.where(np.diff(consecutive_shut) != 1)[0]+1)
-        consecutive = consecutive_open + consecutive_shut
+        if consecutive_shut.size != 0:
+            consecutive_shut = np.unique(np.append(shut_index[consecutive_shut], shut_index[consecutive_shut+1]))
+            consecutive_shut = np.split(consecutive_shut, np.where(np.diff(consecutive_shut) != 1)[0]+1)
+            consecutive += consecutive_shut
     
         if len(consecutive) > 0:
             # Merge all the consecutive open and shut
             for index in consecutive:
                 new_amp = np.mean(amp[index])
                 new_period = np.sum(period[index])
-                new_state = state[index][0]
+                try:
+                    new_state = state[index][0]
+                except IndexError:
+                    pass
                 new_flag = BROKEN if any([flag[i] == BROKEN for i in index]) else NORMAL
     
                 # Delete all the value in this range
