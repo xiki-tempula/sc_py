@@ -15,6 +15,19 @@ def list_folder(current_path):
     return [i_dir for i_dir in os.listdir(current_path)
     if (os.path.isdir(os.path.join(current_path,i_dir)) and i_dir[0] != '.')]
 
+def cluster_list2patch_list(cluster_list):
+    '''
+    Input: a list of clusters
+    Output: a list of patches which contain the previous clusters.
+    '''
+    patch_list = []
+    patchname_list = []
+    for cluster in cluster_list:
+        if not cluster.patchname in patchname_list:
+            patch_list.append(cluster.patch)
+            patchname_list.append(cluster.patchname)
+    return patch_list
+    
 class Batch:
     '''
     Save the information of many clusters into one file.
@@ -111,7 +124,8 @@ class Batch:
             return self._cluster_list
 
     def query(self, receptor = None, mutation = None,
-              composition = None, agonist = None, concentration = None):
+              composition = None, agonist = None, concentration = None,
+              output = 'cluster'):
         '''
         Output a list of clusters which satisfies the condition.
         '''
@@ -130,7 +144,10 @@ class Batch:
                     condition = False
             if condition:
                 query_list.append(cluster)
-        return query_list
+        if output == 'cluster':        
+            return query_list
+        elif output == 'patch':
+            return cluster_list2patch_list(query_list)
 
     def filter_by(self, amplitude = [-float('inf'), float('inf')],
                         popen = [0,1],
@@ -151,8 +168,3 @@ class Batch:
 
                 query_list.append(cluster)
         return query_list
-
-
-#a = BatchQuery('/Users/xiki_tempula/Documents/data/')
-#a.scan_folder()
-#a.query(concentration = 100)

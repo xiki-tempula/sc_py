@@ -4,7 +4,7 @@ Read from Csv file and generate the cluster data from it.
 """
 import numpy as np
 import os
-from cost_function import compute_stretch_number, compute_separation_dict
+from cost_function import compute_stretch_number, compute_separation_dict, compute_separation_dp, test_dp
 from preparation import filter_first_last, impose_resolution
 
 
@@ -89,7 +89,8 @@ class Patch:
 
                 # Create new cluster
                 self._cluster_number += 1
-                new_cluster = Cluster(self._patch_name, i+1)
+                new_cluster = Cluster(self._patch_name, i+1, patch = self)
+
                 new_cluster.add_info(self._cluster_number,
                                      start[open_period_idx[0]], end[shut_period_idx[-1]],
                                     dwell[open_period_idx], dwell[shut_period_idx],
@@ -120,10 +121,52 @@ class Patch:
 
         if output:
             print(self._cluster_list)
-        return self._cluster_list
+        return list(self._cluster_dict.values())
+    
+
 
     __getitem__ = get_cluster
-
+    
+    def _get_open_period(self):
+        open_period = []
+        for cluster in self._cluster_dict.values():
+            open_period.append(cluster.open_period)
+        open_period = np.hstack(open_period)
+        return open_period
+    open_period = property(_get_open_period)
+    
+    def _get_shut_period(self):
+        shut_period = []
+        for cluster in self._cluster_dict.values():
+            shut_period.append(cluster.shut_period)
+        shut_period = np.hstack(shut_period)
+        return shut_period
+    shut_period = property(_get_shut_period)
+    
+    
+    def _get_amp_distribution(self):
+        amp_distribution = []
+        for cluster in self._cluster_dict.values():
+            amp_distribution.append(cluster.mean_amp)
+        return amp_distribution
+    amp_distribution = property(_get_amp_distribution)
+     
+    def _get_popen_distribution(self):
+        popen_distribution = []
+        for cluster in self._cluster_dict.values():
+            popen_distribution.append(cluster.popen)
+        return popen_distribution
+    popen_distribution = property(_get_popen_distribution)
+    
+    def _get_cluster_number(self): return self._cluster_number    
+    cluster_number  = property(_get_cluster_number)
+    
+    def _get_transition_number(self): return len(self.open_period) + len(self.shut_period)
+    transition_number = property(_get_transition_number)
+    
+    def _get_patchname(self): return self._patch_name
+    patchname = property(_get_patchname)
+        
     def __iter__(self):
         cluster_list = self._cluster_list.copy()
         while cluster_list:
@@ -147,9 +190,10 @@ class Cluster:
     Detail information about a cluster.
     '''
 
-    def __init__(self, patchname, cluster_no):
+    def __init__(self, patchname, cluster_no, patch = None):
         self.patchname = patchname
         self.cluster_no = cluster_no
+        self.patch = patch
 
     def add_info(self, cluster_no, start, end,
                  open_period, shut_period,
@@ -271,6 +315,7 @@ class Cluster:
         self.impose_resolution()
         separation_dict, cost_dict, mean_cost_dict = compute_separation_dict(
         np.log(self.open_period), np.log(self.shut_period), mode_number)
+        #test_dp(np.log(self.open_period), np.log(self.shut_period), 10)
         mode_number = compute_stretch_number(cost_dict, mean_cost_dict, threshold)
         self.mode_number = mode_number
         self._separation_dict = separation_dict

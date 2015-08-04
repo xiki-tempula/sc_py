@@ -94,10 +94,10 @@ class PlotSingle(PlotMPL):
             ax.scatter(stretch['open_period'], stretch['shut_period'],
                        facecolors='none',
                        edgecolors=plt.cm.spectral(cmap[index]),
-                       s=1)
-            ax.scatter(stretch['mean_open'][index], stretch['mean_shut'][index],
-                       color=plt.cm.spectral(cmap[index]),
-                       s=50, label = str(index + 1))
+                       s=1, label = str(index + 1))
+            #ax.scatter(stretch['mean_open'], stretch['mean_shut'],
+            #           color=plt.cm.spectral(cmap[index]),
+             #          s=50, label = str(index + 1))
     
         ax.legend()
         ax.set_xscale('log')
@@ -129,12 +129,12 @@ class PlotSingle(PlotMPL):
 
         # Plot cost and mean cost function
         ax1 = fig.add_subplot(211)
-        ax1.plot(x, cost, color = 'blue', label = 'cost')
-        ax1.plot(x, mean_cost, color = 'red', label = 'mean cost')
+        ax1.plot(x, cost, color = 'blue', label = 'minimum cost')
+        ax1.plot(x, mean_cost, color = 'red', label = 'average cost')
         ax1.plot(mode_num, cost[mode_num - 1], 'o')
         ax1.plot(mode_num, mean_cost[mode_num - 1], 'o')
         ax1.set_xlabel('Mode number')
-        ax1.set_ylabel('Normalised cost')
+        ax1.set_ylabel('Cost')
         ax1.legend()
         # ax1.set_ylim(bottom=0)
 
@@ -143,9 +143,9 @@ class PlotSingle(PlotMPL):
         ax2 = fig.add_subplot(212)
         ax2.plot(x, difference, 'o')
         ax2.plot(x, mean_difference)
-        ax1.set_xlabel('Mode number')
-        ax1.set_ylabel('Normalised cost difference')
-        ax1.set_title('Cost/Difference')
+        ax2.set_xlabel('Mode number')
+        ax2.set_ylabel('effectiveness')
+        ax1.set_title('Optimum number of stretches')
 
         if savefig:
             fig.savefig(os.path.join(self.filepath,self.name+'Cost_Difference.png'),dpi=300)

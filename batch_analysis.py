@@ -19,12 +19,14 @@ class BatchAnalysis:
 
     def __init__(self, cluster_list):
         self.cluster_list = cluster_list
+        self.summary = None
 
     def __len__(self):
         return len(self.cluster_list)
 
     def compute_cluster_summary(self, patchname = True, cluster_no = True,
-    popen = True, mean_amp = True, duration = True, event_num = True):
+    popen = True, mean_amp = True, duration = True, event_num = True, 
+    output = 'numpy_array'):
         '''
         Return a dict consists of lists of queried data.
         By default return patchname, cluster_no, popen, amp, duration.
@@ -105,14 +107,16 @@ class BatchAnalysis:
                     self.summary[count][key] = getattr(cluster,key)
                 count += 1
         self.summary = self.summary[:count]
-        return self.summary
+        if output == 'numpy_array':
+            return self.summary
 
     
 
     def compute_stretch_summary(self, patchname = True, cluster_no = True,
                                 stretch_num = True, popen = True,
                                 mean_open = True, mean_shut = True,
-                                duration = True, event_num = True):
+                                duration = True, event_num = True,
+                                output = 'numpy_array'):
         '''
         Compute the summary of stretch information.
         '''
@@ -226,15 +230,15 @@ class BatchAnalysis:
                                                   , dtype=[(key, dtype[key]) for key in option_list])))
 
         self.summary = self.summary[:count]
-
-        return self.summary
+        if output == 'numpy_array':
+            return self.summary
 
     
     def get_summary(self, output = 'string'):
         '''
         Return the summary statistics.
         '''
-        statistics = {}
+        statistics = {'cluster_num': {'value': len(self.summary), 'se': 0}}
         for key in self.summary.dtype.fields:
             if key != 'patchname':
                 value = np.mean(self.summary[key])
@@ -259,3 +263,36 @@ class BatchAnalysis:
         for cluster in self.cluster_list:
             len_list.append(len(cluster.open_period))
         return len_list
+
+class PatchExamination:
+    '''
+    Examine the quality of every patch for kinetic analysis.
+    '''
+    def __init__(self, patchlist):
+        self._patchlist = patchlist
+    
+    def compute_summary_table(self):
+        '''
+        Compute a summary table of the patch list.
+        '''
+
+        non_computed_value = ['patchname', 'cluster_number', 'transition_number']
+        computed_value = ['popen', 'amp']
+        col_title = non_computed_value.copy()
+        for col in computed_value:
+            col_title.append(col+'_mean')
+            col_title.append(col+'_std')
+        
+        self.summary = np.zeros((len(self._patchlist), )
+                , dtype=[(key, dtype[key]) for key in col_title])
+        
+        for index, patch in enumerate(self._patchlist):
+            for col in non_computed_value:
+                self.summary[index][col] = getattr(patch, col)
+            for col in computed_value:
+                distribution = getattr(patch, col+'_distribution')
+                self.summary[index][col+'_mean'] = np.mean(distribution)
+                self.summary[index][col+'_std'] = np.std(distribution)
+        return self.summary
+        
+    

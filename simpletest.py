@@ -305,8 +305,8 @@ class TestSuit:
 
 
 A = TestSuit()
-#A.test_info()
+A.test_info()
 #A.test_PlotComputation_using_PlotMPL()
 A.test_batch_analysis()
-#A.test_batch_query()
+A.test_batch_query()
 A.finish_test()
