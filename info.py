@@ -2,8 +2,13 @@
 """
 Read from Csv file and generate the cluster data from it.
 """
-import numpy as np
 import os
+
+import numpy as np
+import pandas as pd
+
+from dcpyps.dataset import SCRecord
+
 from cost_function import compute_stretch_number, compute_separation_dict, compute_separation_dp, test_dp
 from preparation import filter_first_last, impose_resolution
 
@@ -122,11 +127,11 @@ class Patch:
         if output:
             print(self._cluster_list)
         return list(self._cluster_dict.values())
-    
+
 
 
     __getitem__ = get_cluster
-    
+
     def _get_open_period(self):
         open_period = []
         for cluster in self._cluster_dict.values():
@@ -134,7 +139,7 @@ class Patch:
         open_period = np.hstack(open_period)
         return open_period
     open_period = property(_get_open_period)
-    
+
     def _get_shut_period(self):
         shut_period = []
         for cluster in self._cluster_dict.values():
@@ -142,31 +147,31 @@ class Patch:
         shut_period = np.hstack(shut_period)
         return shut_period
     shut_period = property(_get_shut_period)
-    
-    
+
+
     def _get_amp_distribution(self):
         amp_distribution = []
         for cluster in self._cluster_dict.values():
             amp_distribution.append(cluster.mean_amp)
         return amp_distribution
     amp_distribution = property(_get_amp_distribution)
-     
+
     def _get_popen_distribution(self):
         popen_distribution = []
         for cluster in self._cluster_dict.values():
             popen_distribution.append(cluster.popen)
         return popen_distribution
     popen_distribution = property(_get_popen_distribution)
-    
-    def _get_cluster_number(self): return self._cluster_number    
+
+    def _get_cluster_number(self): return self._cluster_number
     cluster_number  = property(_get_cluster_number)
-    
+
     def _get_transition_number(self): return len(self.open_period) + len(self.shut_period)
     transition_number = property(_get_transition_number)
-    
+
     def _get_patchname(self): return self._patch_name
     patchname = property(_get_patchname)
-        
+
     def __iter__(self):
         cluster_list = self._cluster_list.copy()
         while cluster_list:
@@ -190,7 +195,7 @@ class Cluster:
     Detail information about a cluster.
     '''
 
-    def __init__(self, patchname, cluster_no, patch = None):
+    def __init__(self, patchname = None, cluster_no = None, patch = None):
         self.patchname = patchname
         self.cluster_no = cluster_no
         self.patch = patch
@@ -213,13 +218,46 @@ class Cluster:
         self._open_flag = open_flag
         self._shut_flag = shut_flag
 
-        # Calculate the mean Popen
-        self.popen = np.sum(self.open_period)/(np.sum(self.open_period) +
-        np.sum(self.shut_period))
+
 
         # Impose resolution
         self.impose_resolution()
 
+        self._expolatory_analysis()
+
+    def load_SCRecord(self, SCRecord):
+        '''
+        Load data from SCRecord.
+        '''
+
+        patchname = []
+        for patch in SCRecord.filenames:
+            head, tail = os.path.split(patch)
+            root, ext = os.path.splitext(tail)
+            patchname.append(root)
+        patchname = ','.join(patchname)
+        self.patchname = patchname
+
+        self.start = 0
+        self.end = sum(SCRecord.periods)
+
+
+        self.open_period = np.array(SCRecord.opint)
+        self.shut_period = np.array(SCRecord.shint)
+        self.open_amp = np.array(SCRecord.opamp)*-1
+        self.shut_amp = np.array(SCRecord.shamp)
+        self._open_flag = np.array(SCRecord.oppro)
+        self._shut_flag = np.array(SCRecord.shpro)
+
+        self._expolatory_analysis()
+
+    def _expolatory_analysis(self):
+        '''
+        Calculate the popen, mean amplitude, duration and event_sum.
+        '''
+        # Calculate the mean Popen
+        self.popen = np.sum(self.open_period)/(np.sum(self.open_period) +
+        np.sum(self.shut_period))
         # Calculate mean amplitude
         # Only takes into account of the periods longer than 0.3ms
         # If all the periods are less than 0.3ms take the median instead
@@ -231,9 +269,24 @@ class Cluster:
         # Number of events in th cluster
         self.event_num = len(self.open_period) + len(self.shut_period)
 
+    def _get_dataframe(self, output_list = ['patchname', 'cluster_no', 'period', 'amp', 'flag']):
+        '''
+        Generate dataframe for plotting (currently).
+        '''
+        tempdict = {name: getattr(self, name) for name in output_list}
+        df = pd.DataFrame(tempdict)
+        df = df[output_list]
+        # Check if the even periods are shut and the odd periods are open.
+        assert np.mean(df['amp'][::2]) > 10 * np.mean(df['amp'][1::2])
+
+        df['state'] = np.ones(self.event_num, dtype=bool)
+        df['state'][1::2] = False
+        return df
+
+    dataframe = property(_get_dataframe)
+
     def _get_period(self):
-        cluster_length = len(self.open_period)*2
-        period = np.empty(cluster_length)
+        period = np.empty(self.event_num)
         period[::2] = self.open_period
         period[1::2] = self.shut_period
         return period
@@ -245,8 +298,7 @@ class Cluster:
     period = property(_get_period, _set_period)
 
     def _get_amp(self):
-        cluster_length = len(self.open_amp)*2
-        amp = np.empty(cluster_length)
+        amp = np.empty(self.event_num)
         amp[::2] = self.open_amp
         amp[1::2] = self.shut_amp
         return amp
@@ -258,8 +310,7 @@ class Cluster:
     amp = property(_get_amp, _set_amp)
 
     def _get_flag(self):
-        cluster_length = len(self._open_flag)*2
-        flag = np.empty(cluster_length)
+        flag = np.empty(self.event_num)
         flag[::2] = self._open_flag
         flag[1::2] = self._shut_flag
         return flag
@@ -269,15 +320,15 @@ class Cluster:
         self._shut_flag = flag[1::2]
 
     flag = property(_get_flag, _set_flag)
-    
+
     def _get_mean_open(self):
         return np.exp(np.mean(np.log(self.shut_period)))
     mean_open = property(_get_mean_open)
-    
+
     def _get_mean_shut(self):
         return np.exp(np.mean(np.log(self.open_period)))
     mean_shut = property(_get_mean_shut)
-    
+
     def impose_resolution(self, resolution = 0.3):
         '''
         Impose resolution. By default: 0.3ms
@@ -436,4 +487,3 @@ class BatchCluster(Cluster):
 
     def __repr__(self):
         return 'BatchCluster({}/{})'.format(self.patchname,self.cluster_no)
-

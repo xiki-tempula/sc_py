@@ -7,8 +7,11 @@ Created on Mon Jul 13 16:14:24 2015
 
 from batch_query import Batch
 from PlotAnalysis import PlotSingle
+
 a = Batch(['/Users/zhiyiwu/GitHub/Single_channel/HeteroData/',])
 cluster_list = a.scan_folder()
+
+
 for cluster in cluster_list:
     cluster.compute_mode()
     cluster.compute_mode_detail(True)

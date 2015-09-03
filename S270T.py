@@ -27,6 +27,7 @@ total = ''
 amp = []
 popen = []
 errorbar = []
+total_summary = pd.DataFrame()
 for concentration in concentation_list:
     cluster_list = batch.query(mutation = 'S270T', concentration = concentration)
     
@@ -34,7 +35,11 @@ for concentration in concentation_list:
                              output = 'patch')
     patch_summary = PatchExamination(patch_list)  
     summary = patch_summary.compute_summary_table()
-    print(pd.DataFrame(summary))
+    summary = pd.DataFrame(summary)
+    
+    length = len(summary)
+    summary.loc[:,'concentration'] = float(concentration)
+    total_summary = total_summary.append(summary, ignore_index=True)
 
     if cluster_list:
         cluster_summary = BatchAnalysis(cluster_list)
@@ -81,3 +86,4 @@ plt.xlim([0.1, 1000])
 plt.title('Popen curve')
 plt.savefig(os.path.join('/Volumes/c-floor/William/data','Popen_curve.png'),dpi=300)
 plt.close()
+total_summary.to_csv('out.csv', index=False)
