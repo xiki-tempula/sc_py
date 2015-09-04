@@ -13,6 +13,7 @@ from info import Patch
 from PlotAnalysis import PlotSingle
 from batch_analysis import BatchAnalysis
 from batch_query import Batch
+from plot_computation import separate_multiply_line
 
 class TestSuit:
     '''
@@ -301,12 +302,44 @@ class TestSuit:
         Delete the test file generate during the test.
         '''
         shutil.rmtree(self._dir)
+class FunctionTest:
+    '''
+    Test for single function.
+    '''
+    
+    def test_separate_multiply_line():
+        '''        
+        Test separate_multiply_line from the plot_computation module.
+        '''
+        a = np.repeat(np.array(range(20)),2)
+        b=np.hstack((0, np.repeat(np.array(range(1,20)),2), 20))
+        new_a,new_b=separate_multiply_line(a,b,tracelength=3.5)
+        correct_a = \
+        [np.array([ 0. ,  0. ,  1. ,  1. ,  2. ,  2. ,  3. ,  3. ,  3.5]),
+         np.array([ 3.5,  4. ,  4. ,  5. ,  5. ,  6. ,  6. ,  7. ,  7. ]),
+         np.array([  8. ,   8. ,   9. ,   9. ,  10. ,  10. ,  10.5]),
+         np.array([ 10.5,  11. ,  11. ,  12. ,  12. ,  13. ,  13. ,  14. ,  14. ]),
+         np.array([ 15. ,  15. ,  16. ,  16. ,  17. ,  17. ,  17.5]),
+         np.array([ 17.5,  18. ,  18. ,  19. ,  19. ])]
+        correct_b = \
+        [np.array([0, 1, 1, 2, 2, 3, 3, 4, 4]),
+         np.array([4, 4, 5, 5, 6, 6, 7, 7, 8]),
+         np.array([ 8,  9,  9, 10, 10, 11, 11]),
+         np.array([11, 11, 12, 12, 13, 13, 14, 14, 15]),
+         np.array([15, 16, 16, 17, 17, 18, 18]),
+         np.array([18, 18, 19, 19, 20])]
+        for i in range(6):
+            if (new_a[i] == correct_a[i]).all() and (new_b[i] == correct_b[i]).all():
+                pass
+            else:
+                print('separate_multiply_line didn\'t pass test.')
 
 
 
-A = TestSuit()
-A.test_info()
-A.test_PlotComputation_using_PlotMPL()
-A.test_batch_analysis()
-A.test_batch_query()
-A.finish_test()
+#A = TestSuit()
+#A.test_info()
+#A.test_PlotComputation_using_PlotMPL()
+#A.test_batch_analysis()
+#A.test_batch_query()
+#A.finish_test()
+FunctionTest.test_separate_multiply_line()

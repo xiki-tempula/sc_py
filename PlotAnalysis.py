@@ -9,7 +9,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-from plot_computation import PlotSingleCluster, PlotMultiCluster
+from plot_computation import PlotSingleCluster, PlotMultiCluster, separate_multiply_line
 
 class PlotMPL:
     '''
@@ -33,11 +33,13 @@ class PlotSingle(PlotMPL):
         self.cluster_data = PlotSingleCluster(cluster)
         self.name = cluster.identity()
 
-    def plot_original(self, fig = plt.figure(), savefig = True):
+    def plot_original(self, fig = None, savefig = True):
         '''
         Plot the original trace.
         '''
-        fig.clf()
+        if fig is None:
+            fig = plt.figure()
+
         # Build X axis
         time, amp = self.cluster_data.compute_original()
 
@@ -78,7 +80,54 @@ class PlotSingle(PlotMPL):
         if savefig:
             fig.savefig(os.path.join(self.filepath,self.name+'Popen.png'),dpi=300)
 
-    def plot_open_close(self, fig = plt.figure(), savefig = True):
+    def plot_multitrace(self, func_list = ('compute_original', 'compute_popen'),
+                        tracelength = 5e3, trace_number = 10):
+        '''
+        Get the data from the func list and plot the data.
+        '''
+        x_list = []
+        y_list = []
+        for func in func_list:
+            x,y = getattr(self.cluster_data, func)()
+            x_list.append(x)
+            y_list.append(y)
+        
+        sep_x_list = []
+        sep_y_list = []
+        for x,y in zip(x_list, y_list):
+            sep_x, sep_y = separate_multiply_line(x,y,tracelength = tracelength)
+            sep_x_list.append(sep_x)
+            sep_y_list.append(sep_y)
+        
+        page_number = int(np.ceil(len(sep_x)/trace_number))
+        fig_list = []
+        for i in range(page_number):
+            fig = plt.figure()
+            fig.set_size_inches(22,17)
+
+            for j in range(min([trace_number, len(sep_x_list[0]) - i*trace_number])):
+                ax1 = fig.add_subplot(trace_number, 1, j+1)
+                
+                # plot original trace
+                x = sep_x_list[0][i*trace_number+j]
+                y = sep_y_list[0][i*trace_number+j]
+                ax1.plot(x, y, color = 'black', lw=1)
+                ax1.set_xlim([x[0], x[0] + tracelength])
+                ax1.set_ylim([-1, 9])
+                
+                # plot Popen
+                ax2 = ax1.twinx()
+                x = sep_x_list[1][i*trace_number+j]
+                y = sep_y_list[1][i*trace_number+j]
+                ax2.plot(x, y, color = 'blue')
+                ax2.set_xlim([x[0], x[0] + tracelength])
+                ax2.set_ylim([0, 1])
+            fig.suptitle(self.name+'/'+str(i))
+            fig.savefig(os.path.join(self.filepath,self.name+'Joint'+str(i)+'.png'))
+            fig_list.append(fig)            
+            
+
+    def plot_open_close(self, fig = None, savefig = True):
         '''
         Plot the open period versus shut periods.
         '''
@@ -86,7 +135,9 @@ class PlotSingle(PlotMPL):
         stretch_list = self.cluster_data.compute_open_close()
         mode_num = len(stretch_list)
 
-        fig.clf()
+
+        if fig is None:
+            fig = plt.figure()
         ax = fig.add_subplot(111)
         cmap = np.linspace(0,1,mode_num)
 
@@ -108,15 +159,16 @@ class PlotSingle(PlotMPL):
         ax.set_ylabel('Shut period (ms in log scale)')
         ax.set_title('Open/Shut')
         if savefig:
-            fig.savefig(os.path.join(self.filepath,self.name+'Open_Shut.png'),dpi=300)
+            fig.savefig(os.path.join(self.filepath,self.name+'Open_Shut.png'),dpi=150)
 
-    def plot_cost_difference(self, fig = plt.figure(), savefig = True):
+    def plot_cost_difference(self, fig = None, savefig = True):
         '''
         Plot the cost function, and the difference between the cost and
         normalised cost function, which are all normalised by dividing by the
         cluster length.
         '''
-        fig.clf()
+        if fig is None:
+            fig = plt.figure()
 
         # get the data
         dataset = self.cluster_data.compute_cost_diff()

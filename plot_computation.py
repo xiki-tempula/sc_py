@@ -3,7 +3,7 @@ Compute the necessary information for ploting.
 Such as x axis, y axis.
 '''
 import numpy as np
-
+import matplotlib.pyplot as plt
 from batch_analysis import BatchAnalysis
 
 class PlotSingleCluster:
@@ -49,7 +49,7 @@ class PlotSingleCluster:
             popen.append(self.cluster.popen_list[i])
         popen = np.repeat(popen,2)
 
-        return time, popen
+        return np.array(time), popen
 
     def compute_open_close(self):
         '''
@@ -81,6 +81,57 @@ class PlotSingleCluster:
                 np.ones(len(self.cluster.normalised_cost)-self.cluster.mode_number)*np.mean(self.cluster.difference[self.cluster.mode_number-1:])))
         cost_diff['mean_difference'] = mean_difference
         return cost_diff
+    
+def separate_multiply_line(x, y, tracelength = 5e6):
+     
+     '''
+     Create a list of x and y which is chopped into length of tracelength.
+     '''
+     new_x = []
+     new_y = []
+     offset = x[0]
+     x = x - offset
+     totallength = x[-1]
+     fulllength_trace = int(totallength//tracelength)
+     if fulllength_trace == 0:
+         # If trace doesn't reach full length, don't change
+         new_x.append(x)
+         new_y.append(y)
+     else:
+        
+         # Create first trace
+         final_index = np.where(x > tracelength)[0][0]
+         new_x.append(np.append(x[:final_index], tracelength))
+         new_y.append(y[:final_index+1])
+        
+         for i in range(1,fulllength_trace):
+             # made up te middle part
+             first_index = np.where(x <= tracelength*i)[0][-1]
+             final_index = np.where(x > tracelength*(i+1))[0][0]
+             check = True
+             if x[final_index-1] == tracelength*(i+1):
+                 new_x.append(np.hstack((tracelength*i,x[first_index+1:final_index])))
+                 new_y.append(y[first_index:final_index])
+                 check = False
+             if x[first_index] == tracelength*(i):
+                 new_x.append(np.hstack((x[first_index+1:final_index], tracelength*(i+1))))
+                 new_y.append(y[first_index+1:final_index+1])
+                 check = False
+             if check:
+                 new_x.append(np.hstack((tracelength*i,x[first_index+1:final_index], tracelength*(i+1))))
+                 new_y.append(y[first_index:final_index+1])
+        
+         # Make the final trace
+         first_index = np.where(x <= tracelength*fulllength_trace)[0][-1]
+         new_x.append(np.append(tracelength*fulllength_trace, 
+                       x[first_index+1:]))
+         new_y.append(y[first_index:])
+    
+     for i in range(len(new_x)):
+         new_x[i] = new_x[i]+offset
+     return new_x, new_y
+
+
 
 class PlotMultiCluster:
     '''

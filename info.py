@@ -217,7 +217,7 @@ class Cluster:
         self.shut_amp = shut_amp
         self._open_flag = open_flag
         self._shut_flag = shut_flag
-
+        self.event_num = len(self.open_period) + len(self.shut_period)
 
 
         # Impose resolution
@@ -225,13 +225,13 @@ class Cluster:
 
         self._expolatory_analysis()
 
-    def load_SCRecord(self, SCRecord):
+    def load_SCRecord(self, screcord):
         '''
         Load data from SCRecord.
         '''
 
         patchname = []
-        for patch in SCRecord.filenames:
+        for patch in screcord.filenames:
             head, tail = os.path.split(patch)
             root, ext = os.path.splitext(tail)
             patchname.append(root)
@@ -239,15 +239,15 @@ class Cluster:
         self.patchname = patchname
 
         self.start = 0
-        self.end = sum(SCRecord.periods)
+        self.end = sum(screcord.periods)
 
 
-        self.open_period = np.array(SCRecord.opint)
-        self.shut_period = np.array(SCRecord.shint)
-        self.open_amp = np.array(SCRecord.opamp)*-1
-        self.shut_amp = np.array(SCRecord.shamp)
-        self._open_flag = np.array(SCRecord.oppro)
-        self._shut_flag = np.array(SCRecord.shpro)
+        self.open_period = np.array(screcord.opint)*1000
+        self.shut_period = np.array(screcord.shint)*1000
+        self.open_amp = np.array(screcord.opamp)*-1/1000
+        self.shut_amp = np.array(screcord.shamp)
+        self._open_flag = np.array(screcord.oppro)
+        self._shut_flag = np.array(screcord.shpro)
 
         self._expolatory_analysis()
 
@@ -363,7 +363,6 @@ class Cluster:
         '''
         Compute the ways of separating the mode.
         '''
-        self.impose_resolution()
         separation_dict, cost_dict, mean_cost_dict = compute_separation_dict(
         np.log(self.open_period), np.log(self.shut_period), mode_number)
         #test_dp(np.log(self.open_period), np.log(self.shut_period), 10)
