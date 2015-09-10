@@ -8,14 +8,14 @@ Created on Mon Jul 13 16:14:24 2015
 from batch_query import Batch
 from PlotAnalysis import PlotSingle
 
-a = Batch(['/Users/zhiyiwu/GitHub/Single_channel/HeteroData/',])
+a = Batch(['~/GitHub/Single_channel/HeteroData/',])
 cluster_list = a.scan_folder()
 
 
 for cluster in cluster_list:
     cluster.compute_mode()
     cluster.compute_mode_detail(True)
-    c = PlotSingle('/Users/zhiyiwu/GitHub/sc_py/temp/')
+    c = PlotSingle('~/GitHub/sc_py/temp/')
     c.load_cluster(cluster)
 #    c.plot_original()
 #    c.plot_popen_on_original()
