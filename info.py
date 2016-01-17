@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Read from Csv file and generate the cluster data from it.
 """
@@ -7,10 +6,11 @@ import os
 import numpy as np
 import pandas as pd
 
-from dcpyps.dataset import SCRecord
+from dcpyps import dataset
 
 from cost_function import compute_stretch_number, compute_separation_dict, compute_separation_dp, test_dp
 from preparation import filter_first_last, impose_resolution
+from PlotAnalysis import PlotSingle
 
 
 class Patch:
@@ -19,13 +19,55 @@ class Patch:
     '''
 
     def __init__(self, path):
-        if os.path.isfile(path):
-            if path[-4:] == '.csv':
-                self._filepath, self._patch_name = os.path.split(path)
-            else:
-                raise NameError('%s is not a csv file.' % path)
-        else:
-            raise NameError('%s does not exist.' % path)
+        self._filepath, self._patch_name = os.path.split(path)
+    
+    def read_scn(self, tres=0.0, tcrit=None, event_num = 10, duration = 100):
+        '''
+        read from scn file and divide the record based on the tcrit.
+        '''
+        
+        self._cluster_dict = {}
+        self._cluster_number = 0        
+        screcord = dataset.SCRecord([os.path.join(self._filepath, self._patch_name),], 
+                               tres=tres/1000, tcrit=tcrit/1000)
+                               
+        patchname = []
+        for patch in screcord.filenames:
+            head, tail = os.path.split(patch)
+            root, ext = os.path.splitext(tail)
+            patchname.append(root)
+        patchname = ','.join(patchname)
+        self._patch_name = patchname
+
+        start = 0
+        end = sum(screcord.pint)
+        
+        open_period = np.array(screcord.opint)*1000
+        shut_period = np.array(screcord.shint)*1000
+        open_amp = np.array(screcord.opamp)*-1
+        shut_amp = np.array(screcord.shamp)
+        open_flag = np.array(screcord.oppro)
+        shut_flag = np.array(screcord.shpro)
+        
+        shut_tcrit = np.where(shut_period < tcrit)[0]
+        split_index = np.split(shut_tcrit,
+                                   np.where(np.diff(shut_tcrit) != 1)[0]+1)
+                                   
+                            
+        for cluster in split_index:
+            if (len(cluster) > event_num) or ((sum(open_period[cluster]) + sum(shut_period[cluster]))> duration):
+                self._cluster_number += 1
+                new_cluster = Cluster(self._patch_name, self._cluster_number, patch = self)
+                new_cluster.add_info(self._cluster_number,
+                                         sum(screcord.pint[:cluster[0]]), sum(screcord.pint[:cluster[-1]+1]),
+                                        open_period[cluster], shut_period[cluster],
+                                        open_amp[cluster], shut_amp[cluster],
+                                        open_flag[cluster], shut_flag[cluster],
+                                        impose_resolution = False)
+                self._cluster_dict[self._cluster_number] = new_cluster
+        self._cluster_list = list(self._cluster_dict.keys())
+
+        
 
     def get_path(self):
         '''
@@ -109,7 +151,7 @@ class Patch:
         '''
         Return the requested cluster.
         '''
-        if not hasattr(self, 'cluster_dict'):
+        if not hasattr(self, '_cluster_dict'):
             self.scan()
 
         if output:
@@ -121,7 +163,7 @@ class Patch:
         Return all clusters in this patch.
         '''
 
-        if not hasattr(self, 'cluster_list'):
+        if not hasattr(self, '_cluster_dict'):
             self.scan()
 
         if output:
@@ -189,6 +231,8 @@ class Patch:
         return str_filepath+str_clusternumber
 
 
+        
+
 
 class Cluster:
     '''
@@ -203,7 +247,8 @@ class Cluster:
     def add_info(self, cluster_no, start, end,
                  open_period, shut_period,
                  open_amp, shut_amp,
-                 open_flag, shut_flag):
+                 open_flag, shut_flag,
+                 impose_resolution = True):
         '''
         Add information about the cluster.
         '''
@@ -221,7 +266,8 @@ class Cluster:
 
 
         # Impose resolution
-        self.impose_resolution()
+        if impose_resolution:
+            self.impose_resolution()
 
         self._expolatory_analysis()
 
@@ -322,11 +368,11 @@ class Cluster:
     flag = property(_get_flag, _set_flag)
 
     def _get_mean_open(self):
-        return np.exp(np.mean(np.log(self.shut_period)))
+        return np.mean(self.shut_period)
     mean_open = property(_get_mean_open)
 
     def _get_mean_shut(self):
-        return np.exp(np.mean(np.log(self.open_period)))
+        return np.mean(self.open_period)
     mean_shut = property(_get_mean_shut)
 
     def impose_resolution(self, resolution = 0.3):
@@ -464,9 +510,15 @@ class Cluster:
         str_cluster_no = 'Cluster number: {} \n'.format(int(self.cluster_no))
         str_start_end = 'From {:.2f} s to {:.2f} s. \n'.format(self.start/1000, self.end/1000)
         str_duration = 'Cluster duration: {:.2f} ms \n'.format(self.duration)
-        str_amp = 'Mean amplitude: {:.2f} pA. \n'.format(self.amp)
+        str_amp = 'Mean amplitude: {:.2f} pA. \n'.format(self.mean_amp)
         str_popen = 'Popen is {:.2f}'.format(self.popen)
         return str_filepath+str_cluster_no+str_start_end+str_duration+str_amp+str_popen
+    
+    def show_origianl(self):
+        plot = PlotSingle()
+        plot.load_cluster(self)
+        plot.plot_original(savefig = False, display = True)
+        
 
 
 class BatchCluster(Cluster):

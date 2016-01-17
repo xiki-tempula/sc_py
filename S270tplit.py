@@ -4,15 +4,15 @@ Created on Fri Sep  4 15:18:53 2015
 
 @author: zhiyiwu
 """
-from info import Cluster
+from info import Cluster,Patch
 from dcpyps import dataset
 from PlotAnalysis import PlotSingle
-scnfiles = ['/Volumes/c-floor/William/S270T/0.1/15071503.SCN']
-rec = dataset.SCRecord(scnfiles, 0.1, 25e-6)
-cluster = Cluster()
-cluster.load_SCRecord(rec)
-cluster.compute_mode()
-cluster.compute_mode_detail(True)
-c = PlotSingle('/Users/zhiyiwu/GitHub/sc_py/temp/')
-c.load_cluster(cluster)
-c.plot_multitrace()
+from batch_analysis import BatchAnalysis
+
+scnfiles = '/Users/xiki_tempula/Google Drive/scn/G.SCN'
+rec = Patch(scnfiles)
+rec.read_scn(tres=15e-3, tcrit=600)
+cluster_list = BatchAnalysis(rec.get_cluster_list())
+cluster_list.hierarchical_clustering(data = 'popen')
+cluster_list[0].show_origianl()
+

@@ -33,7 +33,7 @@ class PlotSingle(PlotMPL):
         self.cluster_data = PlotSingleCluster(cluster)
         self.name = cluster.identity()
 
-    def plot_original(self, fig = None, savefig = True):
+    def plot_original(self, fig = None, savefig = True, display = False):
         '''
         Plot the original trace.
         '''
@@ -53,6 +53,8 @@ class PlotSingle(PlotMPL):
         self._plot_dict['original'] = fig
         if savefig:
             fig.savefig(os.path.join(self.filepath,self.name+'_Original.png'),dpi=300)
+        if display:
+            plt.show()
 
 
     def plot_popen_on_original(self, savefig = True):

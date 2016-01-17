@@ -20,7 +20,7 @@ from batch_analysis import BatchAnalysis, PatchExamination
 
 sns.set(color_codes=True)
 
-batch = Batch('/Volumes/c-floor/William/data/')
+batch = Batch('./data/')
 batch.scan_orded_folder()
 concentation_list = ['0.3', '1', '3', '10', '100']
 total = ''

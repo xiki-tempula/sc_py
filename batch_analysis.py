@@ -8,9 +8,15 @@ Created on Thu Jul  9 21:27:37 2015
 from collections import OrderedDict
 
 import numpy as np
+from scipy.cluster.hierarchy import dendrogram, linkage
+import matplotlib.pyplot as plt
 from dtype import dtype
 
 NOFILTER = [-float('inf'), float('inf')]
+
+
+    
+    
 
 class BatchAnalysis:
     '''
@@ -23,6 +29,11 @@ class BatchAnalysis:
 
     def __len__(self):
         return len(self.cluster_list)
+    
+    def __getitem__(self, cluster_index):
+        return self.cluster_list[cluster_index]
+
+        
 
     def compute_cluster_summary(self, patchname = True, cluster_no = True,
     popen = True, mean_amp = True, duration = True, event_num = True, 
@@ -263,6 +274,35 @@ class BatchAnalysis:
         for cluster in self.cluster_list:
             len_list.append(len(cluster.open_period))
         return len_list
+    
+    def hierarchical_clustering(self, data = 'open_shut'):
+        '''
+        Cluster the clusters in the cluster list based on the method.
+        '''
+        feature_list = []
+        
+        for cluster in self.cluster_list:
+            if data == 'open_shut':
+                feature_list.append([np.log(cluster._get_mean_open()), 
+                                     np.log(cluster._get_mean_shut())])
+            elif data == 'popen':
+                feature_list.append([cluster.popen,])
+            elif data == 'amp':
+                feature_list.append([cluster.mean_amp,])
+        
+        Z = linkage(feature_list, 'ward')
+        plt.figure(figsize=(25, 10))
+        plt.title('Hierarchical Clustering Dendrogram')
+        plt.xlabel('sample index')
+        plt.ylabel('distance')
+        dendrogram(
+            Z,
+            leaf_rotation=90.,  # rotates the x axis labels
+            leaf_font_size=8.,  # font size for the x axis labels
+        )
+        plt.show()
+            
+                                    
 
 class PatchExamination:
     '''
