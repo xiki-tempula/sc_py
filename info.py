@@ -6,7 +6,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from dcpyps import dataset
+from dcpyps import dataset, dcio
 
 from cost_function import compute_stretch_number, compute_separation_dict, compute_separation_dp, test_dp
 from preparation import filter_first_last, impose_resolution
@@ -21,7 +21,7 @@ class Patch:
     def __init__(self, path):
         self._filepath, self._patch_name = os.path.split(path)
     
-    def read_scn(self, tres=0.0, tcrit=None, event_num = 10, duration = 100):
+    def read_scn(self, tres=0.0, tcrit=None, event_num = 0, duration = float('inf')):
         '''
         read from scn file and divide the record based on the tcrit.
         '''
@@ -29,7 +29,7 @@ class Patch:
         self._cluster_dict = {}
         self._cluster_number = 0        
         screcord = dataset.SCRecord([os.path.join(self._filepath, self._patch_name),], 
-                               tres=tres/1000, tcrit=tcrit/1000)
+                               tres=tres/1e6, tcrit=tcrit/1e3)
                                
         patchname = []
         for patch in screcord.filenames:
@@ -39,8 +39,6 @@ class Patch:
         patchname = ','.join(patchname)
         self._patch_name = patchname
 
-        start = 0
-        end = sum(screcord.pint)
         
         open_period = np.array(screcord.opint)*1000
         shut_period = np.array(screcord.shint)*1000
@@ -59,13 +57,13 @@ class Patch:
                 self._cluster_number += 1
                 new_cluster = Cluster(self._patch_name, self._cluster_number, patch = self)
                 new_cluster.add_info(self._cluster_number,
-                                         sum(screcord.pint[:cluster[0]]), sum(screcord.pint[:cluster[-1]+1]),
+                                         sum(open_period[:cluster[0]]+shut_period[:cluster[0]]),
+                                        sum(open_period[:cluster[-1]+1]+shut_period[:cluster[-1]+1]),
                                         open_period[cluster], shut_period[cluster],
                                         open_amp[cluster], shut_amp[cluster],
                                         open_flag[cluster], shut_flag[cluster],
                                         impose_resolution = False)
                 self._cluster_dict[self._cluster_number] = new_cluster
-        self._cluster_list = list(self._cluster_dict.keys())
 
         
 
@@ -145,7 +143,6 @@ class Patch:
                                     np.zeros(len(open_period_idx)),
                                     np.zeros(len(shut_period_idx)))
                 self._cluster_dict[self._cluster_number] = new_cluster
-        self._cluster_list = list(self._cluster_dict.keys())
 
     def get_cluster(self, cluster_index, output = False):
         '''
@@ -173,6 +170,69 @@ class Patch:
 
 
     __getitem__ = get_cluster
+    
+    def filter_cluster(self, func, *params):
+        '''
+        Filter out the clusters which returns False by func.
+        '''
+        self._cluster_number = 0
+        cluster_dict = {}
+        for index in self._cluster_list:
+            cluster = self._cluster_dict[index]
+            if func(cluster, *params):
+                self._cluster_number += 1
+                cluster.cluster_no = self._cluster_number
+                cluster_dict[self._cluster_number] = cluster
+        self._cluster_dict = cluster_dict
+                
+                
+    
+    def write_scn(self, modified = 'modified_', filepath = None, 
+                  patch_name = None):
+        '''
+        Write into scn file.
+        '''
+        if filepath is None:
+            filepath = self._filepath
+        if patch_name is None:
+            patch_name = modified + self._patch_name+'.SCN'
+            
+        intervals = []
+        amplitudes = []
+        flags = []
+        
+        end = 0
+        
+        for cluster_num in self._cluster_list:
+            cluster = self._cluster_dict[cluster_num]
+            #add a shut time interval which represents the intercluster shut time
+            shut = cluster.start - end
+            end = cluster.end
+            intervals.append(shut)
+            amplitudes.append(0)
+            # Flag this shut time as bad
+            flags.append(8)
+            
+            # Add data
+            intervals.append(cluster.period)
+            amplitudes.append(cluster.amp)
+            flags.append(cluster.flag)
+            
+        intervals = np.hstack(intervals)
+        amplitudes = np.hstack(amplitudes)*-1
+        amplitudes = amplitudes.astype('int')
+        flags = np.hstack(flags)
+        flags = flags.astype('int')
+        
+        filename = os.path.join(filepath, patch_name)
+        dcio.scn_write(intervals, amplitudes, flags, filename=filename)
+            
+            
+            
+            
+            
+        
+        
 
     def _get_open_period(self):
         open_period = []
@@ -229,7 +289,9 @@ class Patch:
         str_filepath = 'Filepath: {} \n'.format(self.get_path())
         str_clusternumber = 'Number of clusters: {} \n'.format(int(self._cluster_number))
         return str_filepath+str_clusternumber
-
+    
+    def _get_cluster_list(self): return list(self._cluster_dict.keys())
+    _cluster_list = property(_get_cluster_list)
 
         
 

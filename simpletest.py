@@ -14,6 +14,7 @@ from PlotAnalysis import PlotSingle
 from batch_analysis import BatchAnalysis
 from batch_query import Batch
 from plot_computation import separate_multiply_line
+from dcpyps import dataset, dcio
 
 class TestSuit:
     '''
@@ -334,7 +335,22 @@ class FunctionTest:
             else:
                 print('separate_multiply_line didn\'t pass test.')
 
-
+    def test_scn_write():
+        intervals = np.hstack((np.arange(1,501),np.arange(1,501)))
+        amplitudes = np.ones(1000)*-1
+        amplitudes[::2] = 0
+        amplitudes = amplitudes.astype('int')
+        flags = np.zeros(1000)
+        flags = flags.astype('int')
+        dcio.scn_write(intervals, amplitudes, flags, filename='./test.SCN')
+        new_patch = Patch('./test.SCN')
+        new_patch.read_scn(tres=0, tcrit=500)
+        new_patch.write_scn()
+        new_patch = Patch('./modified_test.SCN')
+        new_patch.read_scn(tres=0, tcrit=np.inf)
+        period = new_patch[1].period
+        print(sum(intervals[3:-1]-period))
+        
 
 #A = TestSuit()
 #A.test_info()
@@ -342,4 +358,5 @@ class FunctionTest:
 #A.test_batch_analysis()
 #A.test_batch_query()
 #A.finish_test()
-FunctionTest.test_separate_multiply_line()
+#FunctionTest.test_separate_multiply_line()
+FunctionTest.test_scn_write()

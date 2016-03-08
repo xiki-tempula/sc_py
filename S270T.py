@@ -30,13 +30,13 @@ errorbar = []
 total_summary = pd.DataFrame()
 for concentration in concentation_list:
     cluster_list = batch.query(mutation = 'S270T', concentration = concentration)
-    
-    patch_list = batch.query(mutation = 'S270T', concentration = concentration, 
+
+    patch_list = batch.query(mutation = 'S270T', concentration = concentration,
                              output = 'patch')
-    patch_summary = PatchExamination(patch_list)  
+    patch_summary = PatchExamination(patch_list)
     summary = patch_summary.compute_summary_table()
     summary = pd.DataFrame(summary)
-    
+
     length = len(summary)
     summary.loc[:,'concentration'] = float(concentration)
     total_summary = total_summary.append(summary, ignore_index=True)
@@ -49,17 +49,17 @@ for concentration in concentation_list:
         plot.set_axis_labels('Popen', 'Amp (pA)')
         plot.savefig(os.path.join('/Volumes/c-floor/William/data','{}_scatter.png'.format(concentration)),dpi=300)
         plt.close()
-        
+
         plot = sns.distplot(result['popen'], bins = np.arange(0,1.05,0.05), kde=False, rug=True);
         plt.title('Popen distribution ({}mM glycine)'.format(concentration))
         plt.savefig(os.path.join('/Volumes/c-floor/William/data','{}_Popen_original.png'.format(concentration)),dpi=300)
         plt.close()
-        
+
         amp.append(result['mean_amp'])
         result = cluster_summary.compute_cluster_summary(patchname = '2015_07_24_0011.csv')
 
 
-                
+
         result = cluster_summary.compute_cluster_summary(mean_amp = [3.1,5.1])
         result = cluster_summary.get_summary(output = 'dict')
         popen.append(result['popen']['value'])
@@ -69,7 +69,7 @@ for concentration in concentation_list:
         total += string + '\n'
         print(string)
 
-file = codecs.open('/Volumes/c-floor/William/data/summary.txt', 'w', "utf-8")
+file = codecs.open('~/summary.txt', 'w', "utf-8")
 file.write(total)
 file.close()
 
