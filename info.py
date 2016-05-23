@@ -231,7 +231,20 @@ class Patch:
             
             
             
-        
+    def _get_mean_open(self):
+        mean_open = []
+        for cluster in self._cluster_dict.values():
+            mean_open.append(cluster.mean_open)
+        return mean_open
+    mean_open = property(_get_mean_open)
+    
+    def _get_mean_shut(self):
+        mean_shut = []
+        for cluster in self._cluster_dict.values():
+            mean_shut.append(cluster.mean_shut)
+        return mean_shut
+    mean_shut = property(_get_mean_shut)
+    
         
 
     def _get_open_period(self):
@@ -430,11 +443,11 @@ class Cluster:
     flag = property(_get_flag, _set_flag)
 
     def _get_mean_open(self):
-        return np.mean(self.shut_period)
+        return np.mean(self.open_period)
     mean_open = property(_get_mean_open)
 
     def _get_mean_shut(self):
-        return np.mean(self.open_period)
+        return np.mean(self.shut_period)
     mean_shut = property(_get_mean_shut)
 
     def impose_resolution(self, resolution = 0.3):
