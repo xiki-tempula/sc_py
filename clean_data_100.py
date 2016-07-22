@@ -28,10 +28,10 @@ tcrit = [
 ]
 
 
-maxpopen = 0.3
-
-def rule(cluster, maxpopen): 
-    if (cluster.popen > maxpopen): 
+maxopen = 1
+maxshut = float('inf')
+def rule(cluster, maxopen, maxshut): 
+    if (cluster.mean_open > maxopen) or (cluster.mean_shut > maxshut): 
         return False
     else:
         return True
@@ -39,7 +39,7 @@ def rule(cluster, maxpopen):
 for index, name in enumerate(name_list):
     patch = Patch('/Users/zhiyiwu/Documents/pharmfit/raw trace/100/{}.SCN'.format(name))
     patch.read_scn(tres=tres[index], tcrit=tcrit[index])
-    patch.filter_cluster(rule, maxpopen)
+    patch.filter_cluster(rule, maxopen, maxshut)
     patch.write_scn()
 
 
