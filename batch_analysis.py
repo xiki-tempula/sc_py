@@ -66,7 +66,8 @@ class BatchAnalysis:
                 except TypeError:
                     option_list['cluster_no'] = cluster_no
 
-
+        option_list['start'] = NOFILTER
+        option_list['end'] = NOFILTER
         if popen:
             if popen == True:
                 option_list['popen'] = NOFILTER
@@ -90,9 +91,10 @@ class BatchAnalysis:
                 option_list['event_num'] = NOFILTER
             else:
                 option_list['event_num'] = event_num
-
-        element_list = ['patchname', 'cluster_no', 'popen', 'mean_amp', 
-                        'duration', 'event_num', 'mean_open', 'mean_shut']
+        option_list['min_amp'] = NOFILTER
+        option_list['max_amp'] = NOFILTER
+        element_list = ['patchname', 'cluster_no', 'start', 'end','popen', 'mean_amp', 
+                        'duration', 'event_num', 'mean_open', 'mean_shut', 'min_amp', 'max_amp']
 
         count = 0
         self.summary = np.zeros((len(self.cluster_list), )
@@ -153,7 +155,9 @@ class BatchAnalysis:
                     option_list['cluster_no'] = [cluster_no, cluster_no+1]
                 except TypeError:
                     option_list['cluster_no'] = cluster_no
-
+        
+        option_list['start'] = NOFILTER
+        option_list['end'] = NOFILTER
         if stretch_num:
             option_list['stretch_idx'] = NOFILTER
             if type(stretch_num) == bool:
@@ -198,7 +202,7 @@ class BatchAnalysis:
             else:
                 option_list['event_num'] = event_num
         
-        element_list = ['patchname', 'cluster_no', 'stretch_num', 'stretch_idx', 
+        element_list = ['patchname', 'cluster_no', 'start', 'end','stretch_num', 'stretch_idx', 
                         'popen', 'mean_open', 'mean_shut', 'duration', 'event_num']
         count = 0
         self.summary = np.zeros((len(self.cluster_list), )
@@ -210,6 +214,8 @@ class BatchAnalysis:
                 select = True
                 new_stretch = {'patchname': cluster.patchname,
                                'cluster_no': cluster.cluster_no,
+                               'start': cluster.start,
+                               'end': cluster.end,
                                'stretch_num': stretch_num,
                                'stretch_idx': index+1,
                                'popen': mode_dict['popen_list'][index],

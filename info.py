@@ -20,6 +20,7 @@ class Patch:
 
     def __init__(self, path):
         self._filepath, self._patch_name = os.path.split(path)
+        
     
     def read_scn(self, tres=0.0, tcrit=None, event_num = 0, duration = float('inf')):
         '''
@@ -27,7 +28,7 @@ class Patch:
         '''
         
         self._cluster_dict = {}
-        self._cluster_number = 0        
+        self._cluster_number = 0    
         screcord = dataset.SCRecord([os.path.join(self._filepath, self._patch_name),], 
                                tres=tres/1e6, tcrit=tcrit/1e3)
                                
@@ -141,7 +142,9 @@ class Patch:
                                     dwell[open_period_idx], dwell[shut_period_idx],
                                     amp[open_period_idx], amp[shut_period_idx],
                                     np.zeros(len(open_period_idx)),
-                                    np.zeros(len(shut_period_idx)))
+                                    np.zeros(len(shut_period_idx))
+                                    ,impose_resolution = False)
+#                                    )
                 self._cluster_dict[self._cluster_number] = new_cluster
 
     def get_cluster(self, cluster_index, output = False):
@@ -271,6 +274,14 @@ class Patch:
         return amp_distribution
     amp_distribution = property(_get_amp_distribution)
 
+    def _get_transition_distribution(self):
+        transition_distribution = []
+        for cluster in self._cluster_dict.values():
+            transition_distribution.append(cluster.event_num)
+        return transition_distribution
+    
+    transition_distribution = property(_get_transition_distribution)
+
     def _get_popen_distribution(self):
         popen_distribution = []
         for cluster in self._cluster_dict.values():
@@ -318,6 +329,7 @@ class Cluster:
         self.patchname = patchname
         self.cluster_no = cluster_no
         self.patch = patch
+        self.resolution = None
 
     def add_info(self, cluster_no, start, end,
                  open_period, shut_period,
@@ -327,7 +339,7 @@ class Cluster:
         '''
         Add information about the cluster.
         '''
-
+        self.resolution = 0.111
         self.cluster_no = cluster_no
         self.start = start
         self.end = end
@@ -382,7 +394,18 @@ class Cluster:
         # Calculate mean amplitude
         # Only takes into account of the periods longer than 0.3ms
         # If all the periods are less than 0.3ms take the median instead
-        self.mean_amp = np.mean(self.open_amp-self.shut_amp)
+#        self.mean_amp = np.mean(self.open_amp-self.shut_amp)
+        if self.resolution and any(self.open_period > self.resolution*2):
+
+            valid = self.open_amp[self.open_period > self.resolution*2]
+            self.mean_amp = np.mean(valid)
+            self.min_amp = min(valid)
+            self.max_amp = max(valid)
+        else:
+            self.mean_amp = np.mean(self.open_period)
+            self.min_amp = -1
+            self.max_amp = -1
+
 
         # Calculate the duration
         self.duration = sum(self.open_period) + sum(self.shut_period)
@@ -454,16 +477,25 @@ class Cluster:
         '''
         Impose resolution. By default: 0.3ms
         '''
-        (self.start,
-         self.end,
-         self.period,
-         self.amp,
-         self.flag) = impose_resolution(self.start,
+        self.resolution = resolution
+        if impose_resolution(self.start,
+                                             self.end,
+                                             self.period,
+                                             self.amp,
+                                             self.flag,
+                                             resolution):
+            (self.start,
+             self.end,
+             self.period,
+             self.amp,
+             self.flag) = impose_resolution(self.start,
                                              self.end,
                                              self.period,
                                              self.amp,
                                              self.flag,
                                              resolution)
+
+                                             
 
 
     def get_cluster_detail(self):

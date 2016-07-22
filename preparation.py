@@ -75,7 +75,8 @@ def impose_resolution(start, end, period, amp, flag, resolution):
         valid = np.isfinite(amp)
     
         # Find the first open and last shut
-    
+        first = None
+        last = None
         for index in range(cluster_length):
             if valid[index] and state[index]:
                 first = index
@@ -85,67 +86,70 @@ def impose_resolution(start, end, period, amp, flag, resolution):
                 last = index + 1
                 break
             
+        if first is not None and last is not None:
+            # Update the valid range
+            valid[:first] =False
     
-    
-        # Update the valid range
-        valid[:first] =False
-        valid[last:] = False
-    
-        # Update all the value
-        start += np.nansum(period[:first])
-        end -= np.nansum(period[last:])
-        amp = amp[valid]
-        period = period[valid]
-        flag = flag[valid]
-        state = state[valid]
-    
-        # Check for the consecutive open and shut
-        open_index  = np.where(state == True)[0]
-        shut_index  = np.where(state == False)[0]
-        # Find out all the adjacent shut/open.
-        consecutive = []
+            valid[last:] = False
+            
         
-        consecutive_open = np.where(np.diff(open_index) == 1)[0]
-        if consecutive_open.size != 0:
-            consecutive_open = np.unique(np.append(open_index[consecutive_open], open_index[consecutive_open+1]))
-            consecutive_open = np.split(consecutive_open, np.where(np.diff(consecutive_open) != 1)[0]+1)
-            consecutive += consecutive_open
-        
-        consecutive_shut = np.where(np.diff(shut_index) == 1)[0]
-        if consecutive_shut.size != 0:
-            consecutive_shut = np.unique(np.append(shut_index[consecutive_shut], shut_index[consecutive_shut+1]))
-            consecutive_shut = np.split(consecutive_shut, np.where(np.diff(consecutive_shut) != 1)[0]+1)
-            consecutive += consecutive_shut
-    
-        if len(consecutive) > 0:
-            # Merge all the consecutive open and shut
-            for index in consecutive:
-                new_amp = np.mean(amp[index])
-                new_period = np.sum(period[index])
-                try:
-                    new_state = state[index][0]
-                except IndexError:
-                    pass
-                new_flag = BROKEN if any([flag[i] == BROKEN for i in index]) else NORMAL
-    
-                # Delete all the value in this range
-                amp[index] = np.nan
-                period[index] = np.nan
-                flag[index] = np.nan
-                state[index] = np.nan
-    
-                # Fill in the merged value
-                amp[index[0]] = new_amp
-                period[index[0]] = new_period
-                flag[index[0]] = new_flag
-                state[index[0]] = new_state
-    
-            # Get rid of the NaN
-            valid = np.isfinite(period)
+            # Update all the value
+            start += np.nansum(period[:first])
+            end -= np.nansum(period[last:])
             amp = amp[valid]
             period = period[valid]
             flag = flag[valid]
             state = state[valid]
+        
+            # Check for the consecutive open and shut
+            open_index  = np.where(state == True)[0]
+            shut_index  = np.where(state == False)[0]
+            # Find out all the adjacent shut/open.
+            consecutive = []
+            
+            consecutive_open = np.where(np.diff(open_index) == 1)[0]
+            if consecutive_open.size != 0:
+                consecutive_open = np.unique(np.append(open_index[consecutive_open], open_index[consecutive_open+1]))
+                consecutive_open = np.split(consecutive_open, np.where(np.diff(consecutive_open) != 1)[0]+1)
+                consecutive += consecutive_open
+            
+            consecutive_shut = np.where(np.diff(shut_index) == 1)[0]
+            if consecutive_shut.size != 0:
+                consecutive_shut = np.unique(np.append(shut_index[consecutive_shut], shut_index[consecutive_shut+1]))
+                consecutive_shut = np.split(consecutive_shut, np.where(np.diff(consecutive_shut) != 1)[0]+1)
+                consecutive += consecutive_shut
+        
+            if len(consecutive) > 0:
+                # Merge all the consecutive open and shut
+                for index in consecutive:
+                    new_amp = np.mean(amp[index])
+                    new_period = np.sum(period[index])
+                    try:
+                        new_state = state[index][0]
+                    except IndexError:
+                        pass
+                    new_flag = BROKEN if any([flag[i] == BROKEN for i in index]) else NORMAL
+        
+                    # Delete all the value in this range
+                    amp[index] = np.nan
+                    period[index] = np.nan
+                    flag[index] = np.nan
+                    state[index] = np.nan
+        
+                    # Fill in the merged value
+                    amp[index[0]] = new_amp
+                    period[index[0]] = new_period
+                    flag[index[0]] = new_flag
+                    state[index[0]] = new_state
+        
+                # Get rid of the NaN
+                valid = np.isfinite(period)
+                amp = amp[valid]
+                period = period[valid]
+                flag = flag[valid]
+                state = state[valid]
+        
     
-
-    return start, end, period, amp, flag
+        return start, end, period, amp, flag
+    else:
+        return None
